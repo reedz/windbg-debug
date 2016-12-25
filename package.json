@@ -1,0 +1,151 @@
+{
+	"name": "windbg-debug",
+	"displayName": "WinDbg Debug",
+	"version": "0.1.0",
+	"publisher": "dreedz",
+	"description": "WinDbg-based debug adapter for VS Code.",
+	"author": {
+		"name": "Dmitry Reznik",
+		"email": "hello@reedz.name"
+	},
+
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.8.0"
+	},
+	//"icon": "images/mock-debug-icon.svg",
+	"categories": [
+		"Debuggers"
+	],
+	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/reedz/windbg-debug.git"
+	},
+	"bugs": {
+		"url": "https://github.com/reedz/windbg-debug/issues"
+	},
+	"dependencies": {
+	},
+	"devDependencies": {
+		"typescript": "^2.0.10",
+		//"mocha": "^3.1.2",
+		"vscode": "^1.0.3",
+		"vscode-debugadapter-testsupport": "^1.15.0"
+	},
+	"scripts": {
+		"prepublish": "make build",
+		"vscode:prepublish": "make build",
+		"compile": "make build",
+		"watch": "node ./node_modules/typescript/bin/tsc -w -p ./tests",
+		"test": "node ./node_modules/mocha/bin/mocha --timeout 999999 -u tdd ./tests/out/"
+	},
+	"main": "./out/extension",
+	"activationEvents": [
+		"onCommand:extension.mock-debug.getProgramName",
+		"onCommand:extension.mock-debug.provideInitialConfigurations"
+	],
+	"contributes": {
+		"debuggers": [
+			{
+				"type": "windbg",
+				"label": "WinDbg Debug",
+				"program": "./windbg-debug/bin/Release/windbg-debug.exe",
+				"enableBreakpointsFor": {
+					"languageIds": [
+						"c",
+						"cpp",
+						"rust"
+					]
+				},
+				"variables": {
+					"FileBasenameNoExt": "code-debug.getFileBasenameNoExt",
+					"FileNameNoExt": "code-debug.getFileNameNoExt"
+				},
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "Path of executable"
+							},
+							"args": {
+								"type": "string",
+								"description": "Arguments passed to the executable."
+							},
+							"windbgpath": {
+								"type": "string",
+								"description": "Path to the dbgeng.dll library",
+								"default": "./dbgeng.dll"
+							},
+							"workingDir": {
+								"type": "string",
+								"description": "Current working directory",
+								"default": "${workspaceRoot}"
+							},
+							"verbose": {
+								"type": "boolean",
+								"description": "Print debugging information to the console.",
+								"default": false
+							}
+						}
+					},
+					"attach": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "PID of running program"
+							},
+							"verbose": {
+								"type": "boolean",
+								"description": "Print debugging information to the console.",
+								"default": false
+							},
+							"windbgpath": {
+								"type": "string",
+								"description": "Path to the dbgeng.dll library",
+								"default": "./dbgeng.dll"
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"name": "Debug",
+						"type": "windbg",
+						"request": "launch",
+						"target": "./bin/executable"
+					}
+				],
+				"configurationSnippets": [
+					{
+						"label": "WinDbg: Launch Program",
+						"description": "Starts the program using windbg",
+						"body": {
+							"type": "windbg",
+							"request": "launch",
+							"name": "${2:Launch Program}",
+							"target": "${1:./bin/executable}"
+						}
+					},
+					{
+						"label": "WinDbg: Attach to PID",
+						"description": "Attaches to a running program pid using windbg",
+						"body": {
+							"type": "windbg",
+							"request": "launch",
+							"name": "${2:Attach to PID}",
+							"target": "${1:[PID]}"
+						}
+					}
+				]
+			}
+		]
+	}
+}

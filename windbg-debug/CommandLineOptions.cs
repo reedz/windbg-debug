@@ -15,8 +15,11 @@ namespace windbg_debug
         [Option('p', "port", Required = false, DefaultValue = -1, HelpText = "Server port.")]
         public int Port { get; set; }
 
-        [Option('v', "verbose", Required = false, DefaultValue = false, HelpText = "Print details during execution.")]
+        [Option('v', "verbose", Required = false, DefaultValue = true, HelpText = "Print details during execution.")]
         public bool Verbose { get; set; }
+
+        [Option('c', "currentDirectory", Required =false, DefaultValue = "", HelpText = "Set working directory.")]
+        public string CurrentDirectory { get; set; }
 
         [HelpOption]
         public string GetUsage()
