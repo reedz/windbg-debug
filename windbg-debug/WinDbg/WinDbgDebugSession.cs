@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -131,7 +132,14 @@ namespace windbg_debug.WinDbg
 
         public override void Threads(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            var process = Process.GetProcessById(_wrapper.ProcessId);
+
+            List<Thread> threads = new List<Thread>();
+            foreach (ProcessThread thread in process.Threads)
+            {
+                threads.Add(new Thread(thread.Id, $"thread #{thread.Id}"));
+            }
+            SendResponse(response, new ThreadsResponseBody(threads));
         }
 
         public override void Variables(Response response, dynamic arguments)

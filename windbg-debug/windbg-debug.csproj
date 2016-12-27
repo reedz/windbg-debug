@@ -22,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -64,7 +65,9 @@
     <Compile Include="ReturnCodes.cs" />
     <Compile Include="VsCodeBase\Utilities.cs" />
     <Compile Include="WinDbg\Breakpoint.cs" />
+    <Compile Include="WinDbg\EventCallbacks.cs" />
     <Compile Include="WinDbg\NativeMethods.cs" />
+    <Compile Include="WinDbg\OutputCallbacks.cs" />
     <Compile Include="WinDbg\ResponseCodes.cs" />
     <Compile Include="WinDbg\Results\LaunchResult.cs" />
     <Compile Include="WinDbg\WinDbgDebugSession.cs" />
