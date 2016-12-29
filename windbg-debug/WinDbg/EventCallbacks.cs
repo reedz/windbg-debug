@@ -3,12 +3,27 @@ using System;
 
 namespace windbg_debug.WinDbg
 {
-    public class EventCallbacks : IDebugEventCallbacks
+    public class EventCallbacks : IDebugEventCallbacksWide
     {
         private const int CodeOk = 0;
+        public event EventHandler<IDebugBreakpoint> BreakpointHit;
+        private IDebugControl6 _control;
+        public event EventHandler<EXCEPTION_RECORD64> ExceptionHit;
+
+        public EventCallbacks(IDebugControl6 control)
+        {
+            _control = control;
+        }
+
+        public int Breakpoint(IDebugBreakpoint2 breakpoint)
+        {
+            BreakpointHit?.Invoke(this, breakpoint);
+            return (int)DEBUG_STATUS.BREAK;
+        }
 
         public int Breakpoint(IDebugBreakpoint breakpoint)
         {
+            BreakpointHit?.Invoke(this, breakpoint);
             return (int)DEBUG_STATUS.BREAK;
         }
 
@@ -43,8 +58,8 @@ namespace windbg_debug.WinDbg
 
         public int Exception(ref EXCEPTION_RECORD64 Exception, uint FirstChance)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            ExceptionHit?.Invoke(this, Exception);
+            return (int)DEBUG_STATUS.BREAK;
         }
 
         public int ExitProcess(uint ExitCode)
@@ -61,10 +76,18 @@ namespace windbg_debug.WinDbg
 
         public int GetInterestMask(out DEBUG_EVENT Mask)
         {
-            Mask = DEBUG_EVENT.BREAKPOINT | DEBUG_EVENT.CHANGE_DEBUGGEE_STATE | DEBUG_EVENT.CHANGE_ENGINE_STATE
-                | DEBUG_EVENT.CHANGE_SYMBOL_STATE | DEBUG_EVENT.CREATE_PROCESS | DEBUG_EVENT.CREATE_THREAD
-                | DEBUG_EVENT.EXCEPTION | DEBUG_EVENT.EXIT_PROCESS | DEBUG_EVENT.EXIT_THREAD
-                | DEBUG_EVENT.LOAD_MODULE | DEBUG_EVENT.SESSION_STATUS | DEBUG_EVENT.SYSTEM_ERROR
+            Mask = DEBUG_EVENT.BREAKPOINT 
+                | DEBUG_EVENT.CHANGE_DEBUGGEE_STATE 
+                | DEBUG_EVENT.CHANGE_ENGINE_STATE
+                | DEBUG_EVENT.CHANGE_SYMBOL_STATE 
+                | DEBUG_EVENT.CREATE_PROCESS 
+                | DEBUG_EVENT.CREATE_THREAD
+                | DEBUG_EVENT.EXCEPTION 
+                | DEBUG_EVENT.EXIT_PROCESS 
+                | DEBUG_EVENT.EXIT_THREAD
+                | DEBUG_EVENT.LOAD_MODULE 
+                | DEBUG_EVENT.SESSION_STATUS 
+                | DEBUG_EVENT.SYSTEM_ERROR
                 | DEBUG_EVENT.UNLOAD_MODULE;
 
             return CodeOk;

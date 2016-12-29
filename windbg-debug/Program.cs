@@ -19,7 +19,6 @@ namespace windbg_debug
 
             Debugger.Launch();
 
-
             if (!CommandLine.Parser.Default.ParseArguments(args, _options))
             {
                 Console.Error.WriteLine(_options.GetUsage());

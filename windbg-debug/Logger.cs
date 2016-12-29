@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace windbg_debug
 {
@@ -15,6 +16,8 @@ namespace windbg_debug
         {
             if (_verbose)
                 Console.Error.WriteLine(text);
+
+            File.AppendAllText("G:\\temp.txt", text + Environment.NewLine);
         }
     }
 }

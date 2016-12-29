@@ -1,16 +1,20 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using VSCodeDebug;
+using windbg_debug.WinDbg.Data;
+using windbg_debug.WinDbg.Messages;
+using windbg_debug.WinDbg.Results;
+using StackFrame = VSCodeDebug.StackFrame;
 
 namespace windbg_debug.WinDbg
 {
     public class WinDbgDebugSession : DebugSession
     {
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(3);
         private readonly Logger _logger;
         private WinDbgWrapper _wrapper;
 
@@ -62,7 +66,7 @@ namespace windbg_debug.WinDbg
             LogFinish();
         }
 
-        public override void Launch(Response response, dynamic arguments)
+        public async override void Launch(Response response, dynamic arguments)
         {
             LogStart();
             string workingDir = arguments.workingDir;
@@ -78,14 +82,21 @@ namespace windbg_debug.WinDbg
             string args = arguments.args;
             string debuggerEnginePath = arguments.windbgpath;
             _wrapper = new WinDbgWrapper(debuggerEnginePath);
+            _wrapper.BreakpointHit += _wrapper_BreakpointHit;
 
-            var launchResult = _wrapper.Launch(target, args);
-            if (!launchResult.Success)
-                SendErrorResponse(response, (int)ResponseCodes.FailedToLaunch, launchResult.Error);
+            var result = await _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), DefaultTimeout);
+
+            if (!result.Success)
+                SendErrorResponse(response, (int)ResponseCodes.FailedToLaunch, result.Error);
             else
                 SendResponse(response);
 
             LogFinish();
+        }
+
+        private void _wrapper_BreakpointHit(Breakpoint breakpoint, int threadId)
+        {
+            SendEvent(new StoppedEvent(threadId, "breakpoint"));
         }
 
         public override void Next(Response response, dynamic arguments)
@@ -100,7 +111,7 @@ namespace windbg_debug.WinDbg
 
         public override void Scopes(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            SendResponse(response, new ScopesResponseBody(new List<Scope> { new Scope("Current", 0) }));
         }
 
         public override void SetBreakpoints(Response response, dynamic arguments)
@@ -110,14 +121,19 @@ namespace windbg_debug.WinDbg
             string source = arguments.source.path;
             int[] lines = arguments.lines.ToObject<int[]>();
 
-            _wrapper.SetBreakpoints(lines.Select(x => new Breakpoint(source, x)));
-
+            _wrapper.HandleMessageWithoutResult(new SetBreakpointsMessage(lines.Select(x => new Breakpoint(source, x))));
             LogFinish();
         }
 
-        public override void StackTrace(Response response, dynamic arguments)
+        public async override void StackTrace(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            var result = _wrapper.HandleMessage<StackTraceMessageResult>(new StackTraceMessage(), DefaultTimeout).Result;
+            SendResponse(response, new StackTraceResponseBody(result.Frames.Select(ToStackFrame).ToList()));
+        }
+
+        private StackFrame ToStackFrame(StackTraceFrame frame)
+        {
+            return new StackFrame(frame.Order, $"StackFrame#{frame.Order}", new Source(frame.FilePath), frame.Line, 0);
         }
 
         public override void StepIn(Response response, dynamic arguments)
@@ -144,7 +160,13 @@ namespace windbg_debug.WinDbg
 
         public override void Variables(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            var result = _wrapper.HandleMessage<VariablesMessageResult>(new VariablesMessage(), DefaultTimeout).Result;
+            SendResponse(response, new VariablesResponseBody(result.Variables.Select(ToVariable).ToList()));
+        }
+
+        private VSCodeDebug.Variable ToVariable(Data.Variable variable)
+        {
+            return new VSCodeDebug.Variable(variable.Name, variable.Value);
         }
 
         #endregion

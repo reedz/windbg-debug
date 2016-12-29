@@ -1,25 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using windbg_debug.WinDbg.Messages;
 
 namespace windbg_debug.WinDbg.Results
 {
-    public class LaunchResult
+    public class LaunchMessageResult : MessageResult
     {
-        public LaunchResult():this(null)
+        public LaunchMessageResult():this(null)
         {
-
         }
 
-        public LaunchResult(string error)
+        public LaunchMessageResult(string error)
         {
             Error = error;
         }
 
         public bool Success {  get { return string.IsNullOrEmpty(Error); } }
         public string Error { get; private set; }
-
     }
 }
