@@ -34,14 +34,15 @@ namespace windbg_debug.WinDbg
 
         public override void Continue(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            _wrapper.HandleMessageWithoutResult(new ContinueMessage());
         }
 
         public override void Disconnect(Response response, dynamic arguments)
         {
             if (_wrapper != null)
             {
-                _wrapper.EndSession();
+                _wrapper.HandleMessageWithoutResult(new TerminateMessage());
+                _wrapper.Interrupt();
                 _wrapper = null;
             }
         }
@@ -66,7 +67,7 @@ namespace windbg_debug.WinDbg
             LogFinish();
         }
 
-        public async override void Launch(Response response, dynamic arguments)
+        public override void Launch(Response response, dynamic arguments)
         {
             LogStart();
             string workingDir = arguments.workingDir;
@@ -82,9 +83,10 @@ namespace windbg_debug.WinDbg
             string args = arguments.args;
             string debuggerEnginePath = arguments.windbgpath;
             _wrapper = new WinDbgWrapper(debuggerEnginePath);
-            _wrapper.BreakpointHit += _wrapper_BreakpointHit;
+            _wrapper.BreakpointHit += OnBreakpoint;
+            _wrapper.ExceptionHit += OnException;
 
-            var result = await _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), DefaultTimeout);
+            var result = _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), DefaultTimeout).Result;
 
             if (!result.Success)
                 SendErrorResponse(response, (int)ResponseCodes.FailedToLaunch, result.Error);
@@ -94,19 +96,25 @@ namespace windbg_debug.WinDbg
             LogFinish();
         }
 
-        private void _wrapper_BreakpointHit(Breakpoint breakpoint, int threadId)
+        private void OnException(int exceptionCode, int threadId)
+        {
+            SendEvent(new StoppedEvent(threadId, "exception", $"Error code: {exceptionCode.ToString("X8")}"));
+        }
+
+        private void OnBreakpoint(Breakpoint breakpoint, int threadId)
         {
             SendEvent(new StoppedEvent(threadId, "breakpoint"));
         }
 
         public override void Next(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            _wrapper.HandleMessageWithoutResult(new StepOverMessage());
         }
 
         public override void Pause(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            _wrapper.HandleMessageWithoutResult(new PauseMessage());
+            _wrapper.Interrupt();
         }
 
         public override void Scopes(Response response, dynamic arguments)
@@ -125,7 +133,7 @@ namespace windbg_debug.WinDbg
             LogFinish();
         }
 
-        public async override void StackTrace(Response response, dynamic arguments)
+        public override void StackTrace(Response response, dynamic arguments)
         {
             var result = _wrapper.HandleMessage<StackTraceMessageResult>(new StackTraceMessage(), DefaultTimeout).Result;
             SendResponse(response, new StackTraceResponseBody(result.Frames.Select(ToStackFrame).ToList()));
@@ -138,12 +146,12 @@ namespace windbg_debug.WinDbg
 
         public override void StepIn(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            _wrapper.HandleMessageWithoutResult(new StepIntoMessage());
         }
 
         public override void StepOut(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            _wrapper.HandleMessageWithoutResult(new StepOutMessage());
         }
 
         public override void Threads(Response response, dynamic arguments)

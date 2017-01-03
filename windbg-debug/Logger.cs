@@ -16,8 +16,6 @@ namespace windbg_debug
         {
             if (_verbose)
                 Console.Error.WriteLine(text);
-
-            File.AppendAllText("G:\\temp.txt", text + Environment.NewLine);
         }
     }
 }

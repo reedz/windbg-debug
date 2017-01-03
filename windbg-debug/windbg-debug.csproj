@@ -69,10 +69,15 @@
     <Compile Include="WinDbg\Data\Variable.cs" />
     <Compile Include="WinDbg\EventCallbacks.cs" />
     <Compile Include="WinDbg\InputCallbacks.cs" />
+    <Compile Include="WinDbg\Messages\ContinueMessage.cs" />
     <Compile Include="WinDbg\Messages\LaunchMessage.cs" />
     <Compile Include="WinDbg\Messages\Message.cs" />
+    <Compile Include="WinDbg\Messages\PauseMessage.cs" />
     <Compile Include="WinDbg\Messages\SetBreakpointsMessage.cs" />
     <Compile Include="WinDbg\Messages\StackTraceMessage.cs" />
+    <Compile Include="WinDbg\Messages\StepIntoMessage.cs" />
+    <Compile Include="WinDbg\Messages\StepOutMessage.cs" />
+    <Compile Include="WinDbg\Messages\StepOverMessage.cs" />
     <Compile Include="WinDbg\Messages\TerminateMessage.cs" />
     <Compile Include="WinDbg\Messages\VariablesMessage.cs" />
     <Compile Include="WinDbg\NativeMethods.cs" />

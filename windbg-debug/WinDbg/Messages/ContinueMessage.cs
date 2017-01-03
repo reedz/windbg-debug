@@ -1,0 +1,6 @@
+﻿namespace windbg_debug.WinDbg.Messages
+{
+    public class ContinueMessage : Message
+    {
+    }
+}

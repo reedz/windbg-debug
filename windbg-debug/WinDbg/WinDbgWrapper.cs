@@ -3,7 +3,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +13,7 @@ using windbg_debug.WinDbg.Results;
 namespace windbg_debug.WinDbg
 {
     public delegate void BreakpointHitHandler(Breakpoint breakpoint, int threadId);
+    public delegate void ExceptionHitHandler(int exceptionCode, int threadId);
 
     public class WinDbgWrapper : IDisposable
     {
@@ -35,6 +35,7 @@ namespace windbg_debug.WinDbg
         private const DEBUG_CREATE_PROCESS DEBUG = (DEBUG_CREATE_PROCESS)DEBUG_PROCESS.DETACH_ON_EXIT;
         private const int CodeOk = 0;
         private const int Current = 0;
+        private static readonly int DefaultBufferSize = 1024;
         private readonly CancellationTokenSource _cancel = new CancellationTokenSource();
         private readonly Dictionary<uint, Breakpoint> _breakpoints = new Dictionary<uint, Breakpoint>();
         private int _lastBreakpointId = 1;
@@ -42,18 +43,20 @@ namespace windbg_debug.WinDbg
         [ThreadStatic]
         private IDebugClient6 _debugger;
         [ThreadStatic]
-        private IDebugControl6 _control;
-        [ThreadStatic]
         private IDebugSymbols5 _symbols;
         [ThreadStatic]
         private EventCallbacks _callbacks;
         [ThreadStatic]
-        private IDebugDataSpaces4 _spaces;
-        [ThreadStatic]
         private IDebugAdvanced3 _advanced;
+        // not threadstatic to allow interrupting
+        private IDebugControl6 _control;
+        [ThreadStatic]
+        private IDebugSystemObjects3 _systemObjects;
+
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
         public event BreakpointHitHandler BreakpointHit;
+        public event ExceptionHitHandler ExceptionHit;
         public int ProcessId { get; internal set; }
 
         public WinDbgWrapper(string enginePath)
@@ -81,17 +84,11 @@ namespace windbg_debug.WinDbg
             HandleMessage<MessageResult>(message);
         }
 
-        public void EndSession()
-        {
-            _control.SetInterrupt(DEBUG_INTERRUPT.EXIT);
-            HandleMessageWithoutResult(new TerminateMessage());
-        }
-
-        private void _callbacks_BreakpointHit(object sender, IDebugBreakpoint e)
+        private void OnBreakpoint(object sender, IDebugBreakpoint e)
         {
             var breakpoint = GetBreakpoint(e);
             uint threadId;
-            e.GetMatchThreadId(out threadId);
+            var hr = _systemObjects.GetCurrentThreadSystemId(out threadId);
             if (breakpoint != null)
                 BreakpointHit?.Invoke(breakpoint, (int)threadId);
         }
@@ -105,6 +102,11 @@ namespace windbg_debug.WinDbg
             _breakpoints.TryGetValue(breakpointId, out result);
 
             return result;
+        }
+
+        internal void Interrupt()
+        {
+            _control.SetInterrupt(DEBUG_INTERRUPT.EXIT);
         }
 
         private void DoEndSession()
@@ -122,16 +124,16 @@ namespace windbg_debug.WinDbg
                 DEBUG_ATTACH.DEFAULT);
 
             if (hr != CodeOk)
-                return new LaunchMessageResult($"Error creating process: {hr}");
+                return new LaunchMessageResult($"Error creating process: {hr.ToString("X8")}");
 
             hr = _control.WaitForEvent(DEBUG_WAIT.DEFAULT, uint.MaxValue);
             if (hr != CodeOk)
-                return new LaunchMessageResult($"Error attaching debugger: {hr}");
+                return new LaunchMessageResult($"Error attaching debugger: {hr.ToString("X8")}");
 
             ReadCreatedProcessId(message.FullPath);
             hr = ForceLoadSymbols(message.FullPath);
             if (hr != CodeOk)
-                return new LaunchMessageResult($"Error loading debug symbols: {hr}");
+                return new LaunchMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
 
             return new LaunchMessageResult();
         }
@@ -154,8 +156,8 @@ namespace windbg_debug.WinDbg
             ulong handle, offset;
             uint matchSize;
             hr = _symbols.StartSymbolMatch("*", out handle);
-            var name = new StringBuilder(1024);
-            _symbols.GetNextSymbolMatch(handle, name, 1024, out matchSize, out offset);
+            var name = new StringBuilder(DefaultBufferSize);
+            _symbols.GetNextSymbolMatch(handle, name, DefaultBufferSize, out matchSize, out offset);
             hr = _symbols.EndSymbolMatch(handle);
             return hr;
         }
@@ -202,12 +204,15 @@ namespace windbg_debug.WinDbg
             var token = (CancellationToken)state;
             Initialize();
 
-            // Give VS Code time to set up stuff.
-            Thread.Sleep(1000);
-
+            // Process initial launch message
+            Thread.Sleep(500);
             ProcessMessages();
-            int hr;
 
+            // Give VS Code time to set up stuff.
+            Thread.Sleep(2000);
+            ProcessMessages();
+
+            int hr;
             hr = _control.SetExecutionStatus(DEBUG_STATUS.GO_HANDLED);
 
             while (!token.IsCancellationRequested)
@@ -249,22 +254,48 @@ namespace windbg_debug.WinDbg
                 DoSetBreakpoints(message as SetBreakpointsMessage);
 
             if (message is LaunchMessage)
-            {
                 record.ResultSetter(DoLaunch(message as LaunchMessage));
-            }
 
             if (message is TerminateMessage)
                 DoEndSession();
 
             if (message is StackTraceMessage)
-            {
                 record.ResultSetter(DoGetStackTrace());
-            }
 
             if (message is VariablesMessage)
-            {
                 record.ResultSetter(DoGetVariables());
-            }
+
+            if (message is StepOverMessage)
+                DoStepOver();
+
+            if (message is StepIntoMessage)
+                DoStepInto();
+
+            if (message is StepOverMessage)
+                DoStepOut();
+
+            if (message is ContinueMessage)
+                DoContinue();
+        }
+
+        private void DoContinue()
+        {
+            _control.SetExecutionStatus(DEBUG_STATUS.GO_HANDLED);
+        }
+
+        private void DoStepOut()
+        {
+            //@ TODO
+        }
+
+        private void DoStepInto()
+        {
+            _control.SetExecutionStatus(DEBUG_STATUS.STEP_INTO);
+        }
+
+        private void DoStepOver()
+        {
+            _control.SetExecutionStatus(DEBUG_STATUS.STEP_OVER);
         }
 
         private VariablesMessageResult DoGetVariables()
@@ -282,20 +313,20 @@ namespace windbg_debug.WinDbg
 
             for (uint variableIndex = 0; variableIndex < variableCount; variableIndex++)
             {
-                StringBuilder name = new StringBuilder(1024);
+                StringBuilder name = new StringBuilder(DefaultBufferSize);
                 uint nameSize;
 
-                hr = group.GetSymbolNameWide(variableIndex, name, 1024, out nameSize);
+                hr = group.GetSymbolNameWide(variableIndex, name, DefaultBufferSize, out nameSize);
                 if (hr != CodeOk)
                     continue;
                 var variableName = name.ToString();
 
-                hr = group.GetSymbolTypeNameWide(variableIndex, name, 1024, out nameSize);
+                hr = group.GetSymbolTypeNameWide(variableIndex, name, DefaultBufferSize, out nameSize);
                 if (hr != CodeOk)
                     continue;
                 var typeName = name.ToString();
 
-                hr = group.GetSymbolValueTextWide(variableIndex, name, 1024, out nameSize);
+                hr = group.GetSymbolValueTextWide(variableIndex, name, DefaultBufferSize, out nameSize);
                 if (hr != CodeOk)
                     continue;
                 var value = name.ToString();
@@ -320,8 +351,8 @@ namespace windbg_debug.WinDbg
                 var frame = frames[frameIndex];
                 uint line, filePathSize;
                 ulong displacement;
-                StringBuilder filePath = new StringBuilder(1024);
-                hr = _symbols.GetLineByOffsetWide(frame.InstructionOffset, out line, filePath, 1024, out filePathSize, out displacement);
+                StringBuilder filePath = new StringBuilder(DefaultBufferSize);
+                hr = _symbols.GetLineByOffsetWide(frame.InstructionOffset, out line, filePath, DefaultBufferSize, out filePathSize, out displacement);
                 if (hr != CodeOk)
                     continue;
 
@@ -336,22 +367,22 @@ namespace windbg_debug.WinDbg
             _debugger = CreateDebuggerClient();
             _control = _debugger as IDebugControl6;
             _symbols = _debugger as IDebugSymbols5;
+            _systemObjects = _debugger as IDebugSystemObjects3;
 
             _callbacks = new EventCallbacks(_control);
-            _callbacks.BreakpointHit += _callbacks_BreakpointHit;
-            _callbacks.ExceptionHit += _callbacks_ExceptionHit;
+            _callbacks.BreakpointHit += OnBreakpoint;
+            _callbacks.ExceptionHit += OnException;
 
             _debugger.SetEventCallbacksWide(_callbacks);
             _debugger.SetOutputCallbacksWide(new OutputCallbacks(new Logger(true)));
             _debugger.SetInputCallbacks(new InputCallbacks());
         }
 
-        private void _callbacks_ExceptionHit(object sender, EXCEPTION_RECORD64 e)
+        private void OnException(object sender, EXCEPTION_RECORD64 e)
         {
-            if (e.ExceptionCode == 80000003)
-            {
-                _control.SetExecutionStatus(DEBUG_STATUS.GO);
-            }
+            uint threadId;
+            var hr = _systemObjects.GetCurrentThreadSystemId(out threadId);
+            ExceptionHit?.Invoke((int)e.ExceptionCode, (int)threadId);
         }
 
         #region IDisposable Support
