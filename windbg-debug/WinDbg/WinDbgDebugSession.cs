@@ -14,7 +14,6 @@ namespace windbg_debug.WinDbg
 {
     public class WinDbgDebugSession : DebugSession
     {
-        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(3);
         private readonly InternalLogger _logger;
         private WinDbgWrapper _wrapper;
 
@@ -87,7 +86,7 @@ namespace windbg_debug.WinDbg
             string debuggerEnginePath = arguments.windbgpath;
             InitializeDebugger(arguments, debuggerEnginePath);
 
-            var result = _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), DefaultTimeout).Result;
+            var result = _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), Defaults.Timeout).Result;
 
             if (!result.Success)
                 SendErrorResponse(response, (int)ResponseCodes.FailedToLaunch, result.Error);
@@ -138,10 +137,15 @@ namespace windbg_debug.WinDbg
             SendResponse(response);
         }
 
-        private int counter = 0;
         public override void Scopes(Response response, dynamic arguments)
         {
-            SendResponse(response, new ScopesResponseBody(new List<Scope> { new Scope("Local", counter++) }));
+            int frameId = DynamicHelpers.To<int>(arguments.frameId);
+
+            var result = _wrapper.HandleMessage<ScopesMessageResult>(new ScopesMessage(frameId), Defaults.Timeout).Result;
+            SendResponse(
+                response, 
+                new ScopesResponseBody(
+                    new List<VSCodeDebug.Scope>(result.Scopes.Select(x => new VSCodeDebug.Scope(x.Name, x.Id)))));
         }
 
         public override void SetBreakpoints(Response response, dynamic arguments)
@@ -157,7 +161,9 @@ namespace windbg_debug.WinDbg
 
         public override void StackTrace(Response response, dynamic arguments)
         {
-            var result = _wrapper.HandleMessage<StackTraceMessageResult>(new StackTraceMessage(), DefaultTimeout).Result;
+            int threadId = DynamicHelpers.To<int>(arguments.threadId, 0);
+
+            var result = _wrapper.HandleMessage<StackTraceMessageResult>(new StackTraceMessage(threadId), Defaults.Timeout).Result;
             SendResponse(response, new StackTraceResponseBody(result.Frames.Select(ToStackFrame).ToList()));
         }
 
@@ -180,25 +186,26 @@ namespace windbg_debug.WinDbg
 
         public override void Threads(Response response, dynamic arguments)
         {
-            var process = Process.GetProcessById(_wrapper.ProcessId);
-
-            List<Thread> threads = new List<Thread>();
-            foreach (ProcessThread thread in process.Threads)
-            {
-                threads.Add(new Thread(thread.Id, $"thread #{thread.Id}"));
-            }
-            SendResponse(response, new ThreadsResponseBody(threads));
+            var result = _wrapper.HandleMessage<ThreadsMessageResult>(new ThreadsMessage(), Defaults.Timeout).Result;
+            SendResponse(response, new ThreadsResponseBody(result.Threads.Select(x => new Thread(x.Id, x.Name)).ToList()));
         }
 
         public override void Variables(Response response, dynamic arguments)
         {
-            var result = _wrapper.HandleMessage<VariablesMessageResult>(new VariablesMessage(), DefaultTimeout).Result;
+            int parentId = DynamicHelpers.To<int>(arguments.variablesReference, -1);
+            if (parentId == -1)
+            {
+                SendErrorResponse(response, ErrorCodes.MissingVariablesReference, "variables: property 'variablesReference' is missing", null, false, true);
+                return;
+            }
+
+            var result = _wrapper.HandleMessage<VariablesMessageResult>(new VariablesMessage(parentId), Defaults.Timeout).Result;
             SendResponse(response, new VariablesResponseBody(result.Variables.Select(ToVariable).ToList()));
         }
 
         private VSCodeDebug.Variable ToVariable(Data.Variable variable)
         {
-            return new VSCodeDebug.Variable(variable.Name, variable.Value);
+            return new VSCodeDebug.Variable(variable.Name, variable.Value, variable.HasChildren ? variable.Id : Defaults.NoChildren);
         }
 
         #endregion

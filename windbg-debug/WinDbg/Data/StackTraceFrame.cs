@@ -1,15 +1,17 @@
 ﻿namespace windbg_debug.WinDbg.Data
 {
-    public class StackTraceFrame
+    public class StackTraceFrame : IIndexedItem
     {
-        public StackTraceFrame(ulong offset, int line, string filePath, int order)
+        public StackTraceFrame(int id, ulong offset, int line, string filePath, int order)
         {
             Offset = offset;
             Line = line;
             FilePath = filePath;
             Order = order;
+            Id = id;
         }
 
+        public int Id { get; private set; }
         public ulong Offset { get; private set; }
         public int Line { get; private set; }
         public string FilePath { get; private set; }

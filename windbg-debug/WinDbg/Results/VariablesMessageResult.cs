@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using windbg_debug.WinDbg.Data;
 
 namespace windbg_debug.WinDbg.Results
 {
     public class VariablesMessageResult : MessageResult
     {
-        public VariablesMessageResult(Variable[] variables)
+        public VariablesMessageResult(IEnumerable<Variable> variables)
         {
             if (variables == null)
                 throw new ArgumentNullException(nameof(variables));
@@ -14,6 +15,6 @@ namespace windbg_debug.WinDbg.Results
 
         }
 
-        public Variable[] Variables { get; private set; }
+        public IEnumerable<Variable> Variables { get; private set; }
     }
 }

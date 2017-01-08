@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,8 @@ namespace windbg_debug.WinDbg
 {
     public class WinDbgWrapper : IDisposable
     {
+        #region Fields
+
         private readonly CancellationTokenSource _cancel = new CancellationTokenSource();
         private readonly Dictionary<uint, Breakpoint> _breakpoints = new Dictionary<uint, Breakpoint>();
         private readonly Dictionary<Type, Func<Message, MessageResult>> _handlers = new Dictionary<Type, Func<Message, MessageResult>>();
@@ -38,7 +41,10 @@ namespace windbg_debug.WinDbg
         public event BreakpointHitHandler BreakpointHit;
         public event ExceptionHitHandler ExceptionHit;
         public event BreakHandler BreakHit;
-        public int ProcessId { get; internal set; }
+
+        #endregion
+
+        #region Constructor
 
         public WinDbgWrapper(string enginePath, VSCodeLogger logger)
         {
@@ -51,12 +57,23 @@ namespace windbg_debug.WinDbg
             _debuggerThread = new Thread(MainLoop);
             _debuggerThread.Start(_cancel.Token);
             _logger = logger;
+            State = new DebuggerState();
         }
+
+        #endregion
+
+        #region Public Properties
+
+        public DebuggerState State { get; private set; }
+
+        #endregion
+
+        #region Public Methods
 
         public Task<TResult> HandleMessage<TResult>(Message message, TimeSpan timeout = default(TimeSpan))
             where TResult : MessageResult
         {
-            timeout = timeout == default(TimeSpan) ? TimeSpan.FromMinutes(3) : timeout;
+            timeout = timeout == default(TimeSpan) ? Defaults.Timeout : timeout;
             TaskCompletionSource<TResult> taskSource = new TaskCompletionSource<TResult>();
             var messageRecord = new MessageRecord(message, (result) => taskSource.SetResult(result as TResult));
             _messages.Add(messageRecord);
@@ -78,6 +95,15 @@ namespace windbg_debug.WinDbg
                 BreakpointHit?.Invoke(breakpoint, threadId);
         }
 
+        public void Interrupt()
+        {
+            _control.SetInterrupt(DEBUG_INTERRUPT.EXIT);
+        }
+
+        #endregion
+
+        #region Private Methods
+
         private Breakpoint GetBreakpoint(IDebugBreakpoint e)
         {
             uint breakpointId;
@@ -94,18 +120,15 @@ namespace windbg_debug.WinDbg
             _handlers.Add(typeof(SetBreakpointsMessage), (message) => DoSetBreakpoints((SetBreakpointsMessage)message));
             _handlers.Add(typeof(LaunchMessage), (message) => DoLaunch((LaunchMessage)message));
             _handlers.Add(typeof(TerminateMessage), (message) => DoEndSession());
-            _handlers.Add(typeof(StackTraceMessage), (message) => DoGetStackTrace());
-            _handlers.Add(typeof(VariablesMessage), (message) => DoGetVariables());
+            _handlers.Add(typeof(StackTraceMessage), (message) => DoGetStackTrace((StackTraceMessage)message));
+            _handlers.Add(typeof(VariablesMessage), (message) => DoGetVariables((VariablesMessage)message));
             _handlers.Add(typeof(StepOverMessage), (message) => DoStepOver());
             _handlers.Add(typeof(StepIntoMessage), (message) => DoStepInto());
             _handlers.Add(typeof(StepOutMessage), (message) => DoStepOut());
             _handlers.Add(typeof(ContinueMessage), (message) => DoContinue());
             _handlers.Add(typeof(EvaluateMessage), (message) => DoEvaluate((EvaluateMessage)message));
-        }
-
-        internal void Interrupt()
-        {
-            _control.SetInterrupt(DEBUG_INTERRUPT.EXIT);
+            _handlers.Add(typeof(ThreadsMessage), (message) => DoGetThreads());
+            _handlers.Add(typeof(ScopesMessage), (message) => DoGetScopes((ScopesMessage)message));
         }
 
         private MessageResult DoEndSession()
@@ -125,6 +148,36 @@ namespace windbg_debug.WinDbg
             return new EvaluateMessageResult(string.Empty);
         }
 
+        private ScopesMessageResult DoGetScopes(ScopesMessage message)
+        {
+            int frameId = message.FrameId;
+            EnsureIsCurrentFrame(frameId);
+
+            List<Scope> result = new List<Scope>();
+            foreach (var name in Scopes.GetNames())
+                result.Add(State.AddScope(frameId, (id) => new Scope(id, name)));
+
+            return new ScopesMessageResult(result);
+        }
+
+        private void EnsureIsCurrentFrame(int frameId)
+        {
+            uint actualFrameIndex;
+            var hr = _symbols.GetCurrentScopeFrameIndex(out actualFrameIndex);
+
+            var desiredFrame = State.GetFrame(frameId);
+            if (desiredFrame == null || hr != HResult.Ok)
+                // hope for the best
+                return;
+
+            if (actualFrameIndex == desiredFrame.Order)
+                return;
+
+            hr = _symbols.SetScopeFrameByIndex((uint)desiredFrame.Order);
+            if (hr != HResult.Ok)
+                throw new Exception($"Couldn't get scope for frame '{frameId}' - couldn't switch frame scope.");
+        }
+
         private LaunchMessageResult DoLaunch(LaunchMessage message)
         {
             int hr = _debugger.CreateProcessAndAttachWide(
@@ -141,7 +194,6 @@ namespace windbg_debug.WinDbg
             if (hr != HResult.Ok)
                 return new LaunchMessageResult($"Error attaching debugger: {hr.ToString("X8")}");
 
-            ReadCreatedProcessId(message.FullPath);
             hr = ForceLoadSymbols(message.FullPath);
             if (hr != HResult.Ok)
                 return new LaunchMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
@@ -150,16 +202,6 @@ namespace windbg_debug.WinDbg
             hr = _control.SetCodeLevel(DEBUG_LEVEL.SOURCE);
 
             return new LaunchMessageResult();
-        }
-
-        private void ReadCreatedProcessId(string fullPath)
-        {
-            uint processId;
-            var result = _debugger.GetRunningProcessSystemIdByExecutableName(0, Path.GetFileName(fullPath), DEBUG_GET_PROC.FULL_MATCH, out processId);
-            if (result == HResult.Ok)
-            {
-                ProcessId = (int)processId;
-            }
         }
 
         private int ForceLoadSymbols(string fullPath)
@@ -228,7 +270,7 @@ namespace windbg_debug.WinDbg
             ProcessMessages();
 
             int hr;
-            hr = _control.SetExecutionStatus(DEBUG_STATUS.GO_HANDLED);
+            hr = DoContinueExecution();
 
             while (!token.IsCancellationRequested)
             {
@@ -253,6 +295,12 @@ namespace windbg_debug.WinDbg
             ProcessMessages();
         }
 
+        private int DoContinueExecution()
+        {
+            State.Clear();
+            return _control.SetExecutionStatus(DEBUG_STATUS.GO_HANDLED);
+        }
+
         private void ProcessMessages()
         {
             while (_messages.Count > 0)
@@ -266,7 +314,7 @@ namespace windbg_debug.WinDbg
 
         private MessageResult DoContinue()
         {
-            _control.SetExecutionStatus(DEBUG_STATUS.GO_HANDLED);
+            DoContinueExecution();
 
             return MessageResult.Empty;
         }
@@ -292,54 +340,112 @@ namespace windbg_debug.WinDbg
             return MessageResult.Empty;
         }
 
-        private VariablesMessageResult DoGetVariables()
+        private VariablesMessageResult DoGetVariables(VariablesMessage message)
         {
-            List<Variable> result = new List<Variable>();
-            IDebugSymbolGroup2 group;
-            var hr = _symbols.GetScopeSymbolGroup2(DEBUG_SCOPE_GROUP.ALL, null, out group);
-            if (hr != HResult.Ok)
-                return new VariablesMessageResult(result.ToArray());
-
-            uint variableCount;
-            hr = group.GetNumberSymbols(out variableCount);
-            if (hr != HResult.Ok)
-                return new VariablesMessageResult(result.ToArray());
-
-            for (uint variableIndex = 0; variableIndex < variableCount; variableIndex++)
-            {
-                StringBuilder name = new StringBuilder(Defaults.BufferSize);
-                uint nameSize;
-
-                hr = group.GetSymbolNameWide(variableIndex, name, Defaults.BufferSize, out nameSize);
-                if (hr != HResult.Ok)
-                    continue;
-                var variableName = name.ToString();
-
-                hr = group.GetSymbolTypeNameWide(variableIndex, name, Defaults.BufferSize, out nameSize);
-                if (hr != HResult.Ok)
-                    continue;
-                var typeName = name.ToString();
-
-                hr = group.GetSymbolValueTextWide(variableIndex, name, Defaults.BufferSize, out nameSize);
-                if (hr != HResult.Ok)
-                    continue;
-                var value = name.ToString();
-
-                DEBUG_SYMBOL_PARAMETERS[] parameters = new DEBUG_SYMBOL_PARAMETERS[1];
-                hr = group.GetSymbolParameters(variableIndex, 1, parameters);
-
-                result.Add(new Variable(variableName, typeName, value));
-            }
-
-            return new VariablesMessageResult(result.ToArray());
+            var parentId = message.ParentId;
+            var scope = State.GetScope(parentId);
+            if (scope == null)
+                return DoGetVariablesByVariableId(parentId);
+            else
+                return DoGetVariablesByScope(scope);
+            
         }
 
-        private StackTraceMessageResult DoGetStackTrace()
+        private VariablesMessageResult DoGetVariablesByVariableId(int variableId)
         {
+            var parentVariable = State.GetVariable(variableId);
+            if (parentVariable == null)
+                return new VariablesMessageResult(Enumerable.Empty<Variable>());
+
+            var scope = State.GetScopeForVariable(variableId);
+            if (scope == null)
+                return new VariablesMessageResult(Enumerable.Empty<Variable>());
+
+            var symbols = State.GetSymbolsForScope(scope.Id);
+            if (symbols == null)
+                return new VariablesMessageResult(Enumerable.Empty<Variable>());
+
+            var hr = symbols.ExpandSymbol(parentVariable.SymbolListIndex, true);
+            if (hr != HResult.Ok)
+                return new VariablesMessageResult(Enumerable.Empty<Variable>());
+
+            var result = DoGetVariablesFromSymbols(symbols, parentVariable.SymbolListIndex + 1, parentVariable.SymbolListIndex, parentVariable.Id);
+            return new VariablesMessageResult(result);
+        }
+
+        private IEnumerable<Variable> DoGetVariablesFromSymbols(IDebugSymbolGroup2 symbols, uint startIndex, uint parentSymbolListIndex, int parentId)
+        {
+            List<Variable> result = new List<Variable>();
+            uint variableCount;
+            var hr = symbols.GetNumberSymbols(out variableCount);
+            if (hr != HResult.Ok)
+                return result;
+
+            DEBUG_SYMBOL_PARAMETERS[] parameters = new DEBUG_SYMBOL_PARAMETERS[variableCount];
+            hr = symbols.GetSymbolParameters(0, variableCount, parameters);
+            if (hr != HResult.Ok)
+                return result;
+
+            for (uint variableIndex = startIndex; variableIndex < variableCount; variableIndex++)
+            {
+                if (parentSymbolListIndex != Defaults.NoParent && !IsChild(parentSymbolListIndex, parameters, variableIndex))
+                    continue;
+
+                StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
+                uint nameSize;
+
+                hr = symbols.GetSymbolNameWide(variableIndex, buffer, Defaults.BufferSize, out nameSize);
+                if (hr != HResult.Ok)
+                    continue;
+                var variableName = buffer.ToString();
+
+                hr = symbols.GetSymbolTypeNameWide(variableIndex, buffer, Defaults.BufferSize, out nameSize);
+                if (hr != HResult.Ok)
+                    continue;
+                var typeName = buffer.ToString();
+
+                hr = symbols.GetSymbolValueTextWide(variableIndex, buffer, Defaults.BufferSize, out nameSize);
+                if (hr != HResult.Ok)
+                    continue;
+                var value = buffer.ToString();
+
+                bool hasChildren = false;
+                if (parameters.Length > variableIndex)
+                    hasChildren = parameters[variableIndex].SubElements > 0;
+
+                var variable = State.AddVariable(parentId, (id) => new Variable(id, variableName, typeName, value, hasChildren, variableIndex));
+                result.Add(variable);
+            }
+
+            return result;
+        }
+
+        private static bool IsChild(uint parentSymbolListIndex, DEBUG_SYMBOL_PARAMETERS[] parameters, uint variableIndex)
+        {
+            return parameters[variableIndex].ParentSymbol == parentSymbolListIndex;
+        }
+
+        private VariablesMessageResult DoGetVariablesByScope(Scope scope)
+        {
+            IDebugSymbolGroup2 group;
+            IDebugSymbolGroup2 oldGroup = State.GetSymbolsForScope(scope.Id);
+            var hr = _symbols.GetScopeSymbolGroup2(Scopes.GetScopeByName(scope.Name), oldGroup, out group);
+            if (hr != HResult.Ok)
+                return new VariablesMessageResult(Enumerable.Empty<Variable>());
+            State.UpdateSymbolGroup(scope.Id, group);
+
+            var result = DoGetVariablesFromSymbols(group, 0, Defaults.NoParent, scope.Id);
+            return new VariablesMessageResult(result);
+        }
+
+        private StackTraceMessageResult DoGetStackTrace(StackTraceMessage message)
+        {
+            int threadId = message.ThreadId;
+            EnsureIsCurrentThread(threadId);
             List<StackTraceFrame> resultFrames = new List<StackTraceFrame>();
-            var frames = new DEBUG_STACK_FRAME[1000];
+            var frames = new DEBUG_STACK_FRAME[Defaults.MaxFrames];
             uint framesGot;
-            var hr = _control.GetStackTrace(Defaults.CurrentOffset, Defaults.CurrentOffset, Defaults.CurrentOffset, frames, 1000, out framesGot);
+            var hr = _control.GetStackTrace(Defaults.CurrentOffset, Defaults.CurrentOffset, Defaults.CurrentOffset, frames, Defaults.MaxFrames, out framesGot);
             if (hr != HResult.Ok)
                 return new StackTraceMessageResult(resultFrames.ToArray());
 
@@ -353,10 +459,53 @@ namespace windbg_debug.WinDbg
                 if (hr != HResult.Ok)
                     continue;
 
-                resultFrames.Add(new StackTraceFrame(frame.InstructionOffset, (int)line, filePath.ToString(), (int)frame.FrameNumber));
+                var indexedFrame = State.AddFrame(
+                    threadId, 
+                    (id) => new StackTraceFrame(id, frame.InstructionOffset, (int)line, filePath.ToString(), (int)frame.FrameNumber));
+                resultFrames.Add(indexedFrame);
             }
 
             return new StackTraceMessageResult(resultFrames.ToArray());
+        }
+
+        private void EnsureIsCurrentThread(int threadId)
+        {
+            uint actualCurrentId;
+            var hr = _systemObjects.GetCurrentThreadSystemId(out actualCurrentId);
+            if (hr != HResult.Ok)
+                // hope for the best
+                return;
+
+            if (actualCurrentId == threadId)
+                return;
+
+            uint desiredEngineId;
+            hr = _systemObjects.GetThreadIdBySystemId((uint)threadId, out desiredEngineId);
+            if (hr != HResult.Ok)
+                throw new Exception($"Could not get desired thread ('{threadId}') - error code '{hr.ToString("X8")}'.");
+
+            hr = _systemObjects.SetCurrentThreadId(desiredEngineId);
+            if (hr != HResult.Ok)
+                throw new Exception($"Could not set desired thread ('{threadId}') - error code '{hr.ToString("X8")}'.");
+        }
+
+        private ThreadsMessageResult DoGetThreads()
+        {
+            uint threadCount;
+            var hr = _systemObjects.GetNumberThreads(out threadCount);
+            if (hr != HResult.Ok)
+                return new ThreadsMessageResult(Enumerable.Empty<DebuggeeThread>());
+
+            uint[] engineIds = new uint[threadCount];
+            uint[] systemIds = new uint[threadCount];
+            hr = _systemObjects.GetThreadIdsByIndex(0, threadCount, engineIds, systemIds);
+            if (hr != HResult.Ok)
+                return new ThreadsMessageResult(Enumerable.Empty<DebuggeeThread>());
+
+            var threads = systemIds.Select(x => new DebuggeeThread((int)x, null));
+            State.AddThreads(threads);
+
+            return new ThreadsMessageResult(threads);
         }
 
         private void Initialize()
@@ -396,6 +545,8 @@ namespace windbg_debug.WinDbg
             var hr = _systemObjects.GetCurrentThreadSystemId(out threadId);
             return (int)threadId;
         }
+
+        #endregion
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
