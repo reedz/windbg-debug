@@ -1,5 +1,6 @@
 ﻿using Microsoft.Diagnostics.Runtime.Interop;
 using System;
+using System.Text;
 
 namespace windbg_debug.WinDbg
 {
@@ -8,6 +9,7 @@ namespace windbg_debug.WinDbg
         #region Fields
 
         private readonly VSCodeLogger _logger;
+        private readonly StringBuilder _buffer = new StringBuilder();
 
         #endregion
 
@@ -33,16 +35,31 @@ namespace windbg_debug.WinDbg
 
         public int Output(DEBUG_OUTPUT mask, string text)
         {
-            string message = $"{mask.ToString()} :: {text}";
-            _logger.Log(message);
+            _buffer.Append(text);
+            DoOutput(mask, text);
             return HResult.Ok;
         }
 
         public int Output2(DEBUG_OUTCB Which, DEBUG_OUTCBF Flags, ulong Arg, string Text)
         {
-            _logger.Log($"{Which} :: {Flags} :: {Text}");
+            _buffer.Append(Text);
+            DoOutput(Which, Text);
 
             return HResult.Ok;
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void DoOutput(object prefix, string text)
+        {
+            if (text.Contains("\n"))
+            {
+                string message = $"{prefix} :: {_buffer.ToString()}";
+                _logger.Log(message);
+                _buffer.Clear();
+            }
         }
 
         #endregion
