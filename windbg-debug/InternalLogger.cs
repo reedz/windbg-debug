@@ -3,11 +3,11 @@ using System.IO;
 
 namespace windbg_debug
 {
-    public class Logger
+    public class InternalLogger
     {
         private readonly bool _verbose;
 
-        public Logger(bool verbose)
+        public InternalLogger(bool verbose)
         {
             _verbose = verbose;
         }

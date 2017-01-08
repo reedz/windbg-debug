@@ -15,10 +15,10 @@ namespace windbg_debug.WinDbg
     public class WinDbgDebugSession : DebugSession
     {
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(3);
-        private readonly Logger _logger;
+        private readonly InternalLogger _logger;
         private WinDbgWrapper _wrapper;
 
-        public WinDbgDebugSession(Logger logger, bool traceRequests = false, bool traceResponses = false) : base(true, false)
+        public WinDbgDebugSession(InternalLogger logger, bool traceRequests = false, bool traceResponses = false) : base(true, false)
         {
             _logger = logger;
             TRACE = traceRequests;
@@ -49,7 +49,10 @@ namespace windbg_debug.WinDbg
 
         public override void Evaluate(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            string expression = arguments.expression;
+
+            var result = _wrapper.HandleMessage<EvaluateMessageResult>(new EvaluateMessage(expression)).Result;
+            SendResponse(response, new EvaluateResponseBody(result.Value));
         }
 
         public override void Initialize(Response response, dynamic args)
@@ -82,9 +85,7 @@ namespace windbg_debug.WinDbg
 
             string args = arguments.args;
             string debuggerEnginePath = arguments.windbgpath;
-            _wrapper = new WinDbgWrapper(debuggerEnginePath);
-            _wrapper.BreakpointHit += OnBreakpoint;
-            _wrapper.ExceptionHit += OnException;
+            InitializeDebugger(arguments, debuggerEnginePath);
 
             var result = _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), DefaultTimeout).Result;
 
@@ -94,6 +95,24 @@ namespace windbg_debug.WinDbg
                 SendResponse(response);
 
             LogFinish();
+        }
+
+        private void InitializeDebugger(dynamic arguments, string debuggerEnginePath)
+        {
+            Action<string> logger = (text) => SendEvent(new OutputEvent("stdout", text));
+            _wrapper = new WinDbgWrapper(
+                debuggerEnginePath,
+                new VSCodeLogger(
+                    DynamicHelpers.To<bool>(arguments.verbose, true),
+                    logger));
+            _wrapper.BreakpointHit += OnBreakpoint;
+            _wrapper.ExceptionHit += OnException;
+            _wrapper.BreakHit += OnBreak;
+        }
+
+        private void OnBreak(int threadId)
+        {
+            SendEvent(new StoppedEvent(threadId, "break"));
         }
 
         private void OnException(int exceptionCode, int threadId)
@@ -109,17 +128,20 @@ namespace windbg_debug.WinDbg
         public override void Next(Response response, dynamic arguments)
         {
             _wrapper.HandleMessageWithoutResult(new StepOverMessage());
+            SendResponse(response);
         }
 
         public override void Pause(Response response, dynamic arguments)
         {
             _wrapper.HandleMessageWithoutResult(new PauseMessage());
             _wrapper.Interrupt();
+            SendResponse(response);
         }
 
+        private int counter = 0;
         public override void Scopes(Response response, dynamic arguments)
         {
-            SendResponse(response, new ScopesResponseBody(new List<Scope> { new Scope("Current", 0) }));
+            SendResponse(response, new ScopesResponseBody(new List<Scope> { new Scope("Local", counter++) }));
         }
 
         public override void SetBreakpoints(Response response, dynamic arguments)
@@ -147,11 +169,13 @@ namespace windbg_debug.WinDbg
         public override void StepIn(Response response, dynamic arguments)
         {
             _wrapper.HandleMessageWithoutResult(new StepIntoMessage());
+            SendResponse(response);
         }
 
         public override void StepOut(Response response, dynamic arguments)
         {
             _wrapper.HandleMessageWithoutResult(new StepOutMessage());
+            SendResponse(response);
         }
 
         public override void Threads(Response response, dynamic arguments)

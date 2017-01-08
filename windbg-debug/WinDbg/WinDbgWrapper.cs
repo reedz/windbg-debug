@@ -14,6 +14,7 @@ namespace windbg_debug.WinDbg
 {
     public delegate void BreakpointHitHandler(Breakpoint breakpoint, int threadId);
     public delegate void ExceptionHitHandler(int exceptionCode, int threadId);
+    public delegate void BreakHandler(int threadId);
 
     public class WinDbgWrapper : IDisposable
     {
@@ -38,6 +39,8 @@ namespace windbg_debug.WinDbg
         private static readonly int DefaultBufferSize = 1024;
         private readonly CancellationTokenSource _cancel = new CancellationTokenSource();
         private readonly Dictionary<uint, Breakpoint> _breakpoints = new Dictionary<uint, Breakpoint>();
+        private readonly Dictionary<Type, Func<Message, MessageResult>> _handlers = new Dictionary<Type, Func<Message, MessageResult>>();
+        private readonly VSCodeLogger _logger;
         private int _lastBreakpointId = 1;
 
         [ThreadStatic]
@@ -57,15 +60,20 @@ namespace windbg_debug.WinDbg
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
         public event BreakpointHitHandler BreakpointHit;
         public event ExceptionHitHandler ExceptionHit;
+        public event BreakHandler BreakHit;
         public int ProcessId { get; internal set; }
 
-        public WinDbgWrapper(string enginePath)
+        public WinDbgWrapper(string enginePath, VSCodeLogger logger)
         {
             if (!string.IsNullOrWhiteSpace(enginePath))
                 NativeMethods.SetDllDirectory(Path.GetDirectoryName(enginePath));
 
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
+
             _debuggerThread = new Thread(MainLoop);
             _debuggerThread.Start(_cancel.Token);
+            _logger = logger;
         }
 
         public Task<TResult> HandleMessage<TResult>(Message message, TimeSpan timeout = default(TimeSpan))
@@ -81,16 +89,16 @@ namespace windbg_debug.WinDbg
 
         public void HandleMessageWithoutResult(Message message)
         {
-            HandleMessage<MessageResult>(message);
+            var task = HandleMessage<MessageResult>(message);
+            // TODO: What to do with task ?
         }
 
         private void OnBreakpoint(object sender, IDebugBreakpoint e)
         {
             var breakpoint = GetBreakpoint(e);
-            uint threadId;
-            var hr = _systemObjects.GetCurrentThreadSystemId(out threadId);
+            var threadId = GetCurrentThread();
             if (breakpoint != null)
-                BreakpointHit?.Invoke(breakpoint, (int)threadId);
+                BreakpointHit?.Invoke(breakpoint, threadId);
         }
 
         private Breakpoint GetBreakpoint(IDebugBreakpoint e)
@@ -104,14 +112,40 @@ namespace windbg_debug.WinDbg
             return result;
         }
 
+        private void InitializeHandlers()
+        {
+            _handlers.Add(typeof(SetBreakpointsMessage), (message) => DoSetBreakpoints((SetBreakpointsMessage)message));
+            _handlers.Add(typeof(LaunchMessage), (message) => DoLaunch((LaunchMessage)message));
+            _handlers.Add(typeof(TerminateMessage), (message) => DoEndSession());
+            _handlers.Add(typeof(StackTraceMessage), (message) => DoGetStackTrace());
+            _handlers.Add(typeof(VariablesMessage), (message) => DoGetVariables());
+            _handlers.Add(typeof(StepOverMessage), (message) => DoStepOver());
+            _handlers.Add(typeof(StepIntoMessage), (message) => DoStepInto());
+            _handlers.Add(typeof(StepOutMessage), (message) => DoStepOut());
+            _handlers.Add(typeof(ContinueMessage), (message) => DoContinue());
+            _handlers.Add(typeof(EvaluateMessage), (message) => DoEvaluate((EvaluateMessage)message));
+        }
+
         internal void Interrupt()
         {
             _control.SetInterrupt(DEBUG_INTERRUPT.EXIT);
         }
 
-        private void DoEndSession()
+        private MessageResult DoEndSession()
         {
             _cancel.Cancel();
+
+            return MessageResult.Empty;
+        }
+
+        private EvaluateMessageResult DoEvaluate(EvaluateMessage message)
+        {
+            DEBUG_VALUE value;
+            uint remainderIndex;
+
+            var hr = _control.Evaluate(message.Expression, DEBUG_VALUE_TYPE.INVALID, out value, out remainderIndex);
+
+            return new EvaluateMessageResult(string.Empty);
         }
 
         private LaunchMessageResult DoLaunch(LaunchMessage message)
@@ -134,6 +168,9 @@ namespace windbg_debug.WinDbg
             hr = ForceLoadSymbols(message.FullPath);
             if (hr != CodeOk)
                 return new LaunchMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
+
+            // To make sure source stepping works one line at a time.
+            hr = _control.SetCodeLevel(DEBUG_LEVEL.SOURCE);
 
             return new LaunchMessageResult();
         }
@@ -162,7 +199,7 @@ namespace windbg_debug.WinDbg
             return hr;
         }
 
-        private void DoSetBreakpoints(SetBreakpointsMessage message)
+        private MessageResult DoSetBreakpoints(SetBreakpointsMessage message)
         {
             foreach (var breakpoint in message.Breakpoints)
             {
@@ -187,6 +224,8 @@ namespace windbg_debug.WinDbg
 
                 _breakpoints.Add(id, breakpoint);
             }
+
+            return MessageResult.Empty;
         }
 
         private static IDebugClient6 CreateDebuggerClient()
@@ -205,7 +244,6 @@ namespace windbg_debug.WinDbg
             Initialize();
 
             // Process initial launch message
-            Thread.Sleep(500);
             ProcessMessages();
 
             // Give VS Code time to set up stuff.
@@ -243,59 +281,38 @@ namespace windbg_debug.WinDbg
             while (_messages.Count > 0)
             {
                 var message = _messages.Take();
-                Process(message);
+                Func<Message, MessageResult> handler;
+                if (_handlers.TryGetValue(message.Message.GetType(), out handler))
+                    message.ResultSetter(handler(message.Message));
             }
         }
 
-        private void Process(MessageRecord record)
-        {
-            var message = record.Message;
-            if (message is SetBreakpointsMessage)
-                DoSetBreakpoints(message as SetBreakpointsMessage);
-
-            if (message is LaunchMessage)
-                record.ResultSetter(DoLaunch(message as LaunchMessage));
-
-            if (message is TerminateMessage)
-                DoEndSession();
-
-            if (message is StackTraceMessage)
-                record.ResultSetter(DoGetStackTrace());
-
-            if (message is VariablesMessage)
-                record.ResultSetter(DoGetVariables());
-
-            if (message is StepOverMessage)
-                DoStepOver();
-
-            if (message is StepIntoMessage)
-                DoStepInto();
-
-            if (message is StepOverMessage)
-                DoStepOut();
-
-            if (message is ContinueMessage)
-                DoContinue();
-        }
-
-        private void DoContinue()
+        private MessageResult DoContinue()
         {
             _control.SetExecutionStatus(DEBUG_STATUS.GO_HANDLED);
+
+            return MessageResult.Empty;
         }
 
-        private void DoStepOut()
+        private MessageResult DoStepOut()
         {
             //@ TODO
+
+            return MessageResult.Empty;
         }
 
-        private void DoStepInto()
+        private MessageResult DoStepInto()
         {
             _control.SetExecutionStatus(DEBUG_STATUS.STEP_INTO);
+
+            return MessageResult.Empty;
         }
 
-        private void DoStepOver()
+        private MessageResult DoStepOver()
         {
             _control.SetExecutionStatus(DEBUG_STATUS.STEP_OVER);
+
+            return MessageResult.Empty;
         }
 
         private VariablesMessageResult DoGetVariables()
@@ -330,6 +347,9 @@ namespace windbg_debug.WinDbg
                 if (hr != CodeOk)
                     continue;
                 var value = name.ToString();
+
+                DEBUG_SYMBOL_PARAMETERS[] parameters = new DEBUG_SYMBOL_PARAMETERS[1];
+                hr = group.GetSymbolParameters(variableIndex, 1, parameters);
 
                 result.Add(new Variable(variableName, typeName, value));
             }
@@ -372,17 +392,32 @@ namespace windbg_debug.WinDbg
             _callbacks = new EventCallbacks(_control);
             _callbacks.BreakpointHit += OnBreakpoint;
             _callbacks.ExceptionHit += OnException;
+            _callbacks.BreakHappened += OnBreak;
 
             _debugger.SetEventCallbacksWide(_callbacks);
-            _debugger.SetOutputCallbacksWide(new OutputCallbacks(new Logger(true)));
+            _debugger.SetOutputCallbacksWide(new OutputCallbacks(_logger));
             _debugger.SetInputCallbacks(new InputCallbacks());
+
+            InitializeHandlers();
+        }
+
+        private void OnBreak(object sender, EventArgs e)
+        {
+            var threadId = GetCurrentThread();
+            BreakHit?.Invoke(threadId);
         }
 
         private void OnException(object sender, EXCEPTION_RECORD64 e)
         {
+            var threadId = GetCurrentThread();
+            ExceptionHit?.Invoke((int)e.ExceptionCode, threadId);
+        }
+
+        private int GetCurrentThread()
+        {
             uint threadId;
             var hr = _systemObjects.GetCurrentThreadSystemId(out threadId);
-            ExceptionHit?.Invoke((int)e.ExceptionCode, (int)threadId);
+            return (int)threadId;
         }
 
         #region IDisposable Support

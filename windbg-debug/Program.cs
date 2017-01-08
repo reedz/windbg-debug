@@ -11,7 +11,7 @@ namespace windbg_debug
     class Program
     {
         private static CommandLineOptions _options = new CommandLineOptions();
-        private static Logger _logger;
+        private static InternalLogger _logger;
 
         static int Main(string[] args)
         {
@@ -31,7 +31,7 @@ namespace windbg_debug
                 Environment.CurrentDirectory = _options.CurrentDirectory;
             }
 
-            _logger = new Logger(_options.Verbose);
+            _logger = new InternalLogger(_options.Verbose);
             if (_options.Port != -1)
             {
                 _logger.Log($"Starting to listen from network.");

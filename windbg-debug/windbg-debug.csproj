@@ -57,19 +57,24 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandLineOptions.cs" />
-    <Compile Include="Logger.cs" />
+    <Compile Include="DynamicHelpers.cs" />
+    <Compile Include="InternalLogger.cs" />
     <Compile Include="VsCodeBase\DebugSession.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VsCodeBase\Protocol.cs" />
     <Compile Include="ReturnCodes.cs" />
     <Compile Include="VsCodeBase\Utilities.cs" />
+    <Compile Include="VSCodeLogger.cs" />
     <Compile Include="WinDbg\Data\Breakpoint.cs" />
     <Compile Include="WinDbg\Data\StackTraceFrame.cs" />
     <Compile Include="WinDbg\Data\Variable.cs" />
+    <Compile Include="WinDbg\DebuggerState.cs" />
     <Compile Include="WinDbg\EventCallbacks.cs" />
+    <Compile Include="WinDbg\HResult.cs" />
     <Compile Include="WinDbg\InputCallbacks.cs" />
     <Compile Include="WinDbg\Messages\ContinueMessage.cs" />
+    <Compile Include="WinDbg\Messages\EvaluateMessage.cs" />
     <Compile Include="WinDbg\Messages\LaunchMessage.cs" />
     <Compile Include="WinDbg\Messages\Message.cs" />
     <Compile Include="WinDbg\Messages\PauseMessage.cs" />
@@ -83,6 +88,7 @@
     <Compile Include="WinDbg\NativeMethods.cs" />
     <Compile Include="WinDbg\OutputCallbacks.cs" />
     <Compile Include="WinDbg\ResponseCodes.cs" />
+    <Compile Include="WinDbg\Results\EvaluateMessageResult.cs" />
     <Compile Include="WinDbg\Results\LaunchMessageResult.cs" />
     <Compile Include="WinDbg\Results\MessageResult.cs" />
     <Compile Include="WinDbg\Results\SetBreakpointsMessageResult.cs" />

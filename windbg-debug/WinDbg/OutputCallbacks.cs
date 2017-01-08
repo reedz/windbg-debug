@@ -1,16 +1,14 @@
 ﻿using Microsoft.Diagnostics.Runtime.Interop;
 using System;
-using System.IO;
-using System.Text;
 
 namespace windbg_debug.WinDbg
 {
     public class OutputCallbacks : IDebugOutputCallbacks2
     {
         private const int CodeOk = 0;
-        private readonly Logger _logger;
+        private readonly VSCodeLogger _logger;
 
-        public OutputCallbacks(Logger logger)
+        public OutputCallbacks(VSCodeLogger logger)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));

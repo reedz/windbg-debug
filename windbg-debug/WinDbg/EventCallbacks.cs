@@ -9,6 +9,7 @@ namespace windbg_debug.WinDbg
         public event EventHandler<IDebugBreakpoint> BreakpointHit;
         private IDebugControl6 _control;
         public event EventHandler<EXCEPTION_RECORD64> ExceptionHit;
+        public event EventHandler BreakHappened;
 
         public EventCallbacks(IDebugControl6 control)
         {
@@ -35,7 +36,9 @@ namespace windbg_debug.WinDbg
 
         public int ChangeEngineState(DEBUG_CES Flags, ulong Argument)
         {
-            //throw new NotImplementedException();
+            if (Flags == DEBUG_CES.EXECUTION_STATUS && Argument == (ulong)DEBUG_STATUS.BREAK)
+                BreakHappened?.Invoke(this, new EventArgs());
+
             return CodeOk;
         }
 
