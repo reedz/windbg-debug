@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandLineOptions.cs" />
+    <Compile Include="Defaults.cs" />
     <Compile Include="DynamicHelpers.cs" />
     <Compile Include="InternalLogger.cs" />
     <Compile Include="VsCodeBase\DebugSession.cs" />
@@ -67,6 +68,8 @@
     <Compile Include="VsCodeBase\Utilities.cs" />
     <Compile Include="VSCodeLogger.cs" />
     <Compile Include="WinDbg\Data\Breakpoint.cs" />
+    <Compile Include="WinDbg\Data\Delegates.cs" />
+    <Compile Include="WinDbg\Data\MessageRecord.cs" />
     <Compile Include="WinDbg\Data\StackTraceFrame.cs" />
     <Compile Include="WinDbg\Data\Variable.cs" />
     <Compile Include="WinDbg\DebuggerState.cs" />
