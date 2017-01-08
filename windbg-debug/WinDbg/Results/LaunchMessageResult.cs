@@ -1,9 +1,9 @@
-﻿using windbg_debug.WinDbg.Messages;
-
-namespace windbg_debug.WinDbg.Results
+﻿namespace windbg_debug.WinDbg.Results
 {
     public class LaunchMessageResult : MessageResult
     {
+        #region Constructor
+
         public LaunchMessageResult():this(null)
         {
         }
@@ -13,7 +13,13 @@ namespace windbg_debug.WinDbg.Results
             Error = error;
         }
 
+        #endregion
+
+        #region Public Properties
+
         public bool Success {  get { return string.IsNullOrEmpty(Error); } }
         public string Error { get; private set; }
+
+        #endregion
     }
 }

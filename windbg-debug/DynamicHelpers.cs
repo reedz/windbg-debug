@@ -4,6 +4,8 @@ namespace windbg_debug
 {
     public static class DynamicHelpers
     {
+        #region Public Methods
+
         public static T To<T>(dynamic item, T defaultValue = default(T))
         {
             if (item == null)
@@ -18,5 +20,7 @@ namespace windbg_debug
                 return defaultValue;
             }
         }
+
+        #endregion
     }
 }

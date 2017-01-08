@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -14,8 +13,14 @@ namespace windbg_debug.WinDbg
 {
     public class WinDbgDebugSession : DebugSession
     {
+        #region Fields
+
         private readonly InternalLogger _logger;
         private WinDbgWrapper _wrapper;
+
+        #endregion
+
+        #region Constructor
 
         public WinDbgDebugSession(InternalLogger logger, bool traceRequests = false, bool traceResponses = false) : base(true, false)
         {
@@ -23,6 +28,8 @@ namespace windbg_debug.WinDbg
             TRACE = traceRequests;
             TRACE_RESPONSE = traceResponses;
         }
+
+        #endregion
 
         #region DebugSession implementation
 
@@ -60,7 +67,7 @@ namespace windbg_debug.WinDbg
             OperatingSystem os = Environment.OSVersion;
             if (os.Platform != PlatformID.Win32NT)
             {
-                SendErrorResponse(response, (int)ResponseCodes.PlatformNotSupported, $"WinDbg is not supported on '{os.Platform.ToString()}' platform.");
+                SendErrorResponse(response, ErrorCodes.PlatformNotSupported, $"WinDbg is not supported on '{os.Platform.ToString()}' platform.");
                 return;
             }
 
@@ -79,7 +86,7 @@ namespace windbg_debug.WinDbg
             string target = arguments.target;
             if (string.IsNullOrWhiteSpace(target) || !File.Exists(target))
             {
-                SendErrorResponse(response, (int)ResponseCodes.TargetDoesNotExist, $"Could not launch '{target}' as it does not exist.");
+                SendErrorResponse(response, ErrorCodes.TargetDoesNotExist, $"Could not launch '{target}' as it does not exist.");
             }
 
             string args = arguments.args;
@@ -89,7 +96,7 @@ namespace windbg_debug.WinDbg
             var result = _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), Defaults.Timeout).Result;
 
             if (!result.Success)
-                SendErrorResponse(response, (int)ResponseCodes.FailedToLaunch, result.Error);
+                SendErrorResponse(response, ErrorCodes.FailedToLaunch, result.Error);
             else
                 SendResponse(response);
 
@@ -210,6 +217,8 @@ namespace windbg_debug.WinDbg
 
         #endregion
 
+        #region Private Methods
+
         private void LogStart([CallerMemberName] string method = "<Unknown>")
         {
             _logger.Log($"{method} started.");
@@ -219,5 +228,7 @@ namespace windbg_debug.WinDbg
         {
             _logger.Log($"{method} finished.");
         }
+
+        #endregion
     }
 }

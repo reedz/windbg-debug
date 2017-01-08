@@ -1,14 +1,11 @@
 ﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace windbg_debug.WinDbg
 {
     public class InputCallbacks : IDebugInputCallbacks
     {
+        #region Public Methods
+
         public int EndInput()
         {
             return 0;
@@ -18,5 +15,7 @@ namespace windbg_debug.WinDbg
         {
             return 0;
         }
+
+        #endregion
     }
 }

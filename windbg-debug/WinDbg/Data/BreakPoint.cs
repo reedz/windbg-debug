@@ -4,6 +4,8 @@ namespace windbg_debug.WinDbg
 {
     public class Breakpoint
     {
+        #region Constructor
+
         public Breakpoint(string file, int line)
         {
             if (string.IsNullOrWhiteSpace(file))
@@ -16,7 +18,13 @@ namespace windbg_debug.WinDbg
             Line = line;
         }
 
+        #endregion
+
+        #region Public Properties
+
         public string File { get; private set; }
         public int Line { get; private set; }
+
+        #endregion
     }
 }

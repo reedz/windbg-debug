@@ -87,14 +87,6 @@ namespace windbg_debug.WinDbg
             // TODO: What to do with task ?
         }
 
-        private void OnBreakpoint(object sender, IDebugBreakpoint e)
-        {
-            var breakpoint = GetBreakpoint(e);
-            var threadId = GetCurrentThread();
-            if (breakpoint != null)
-                BreakpointHit?.Invoke(breakpoint, threadId);
-        }
-
         public void Interrupt()
         {
             _control.SetInterrupt(DEBUG_INTERRUPT.EXIT);
@@ -103,6 +95,14 @@ namespace windbg_debug.WinDbg
         #endregion
 
         #region Private Methods
+
+        private void OnBreakpoint(object sender, IDebugBreakpoint e)
+        {
+            var breakpoint = GetBreakpoint(e);
+            var threadId = GetCurrentThread();
+            if (breakpoint != null)
+                BreakpointHit?.Invoke(breakpoint, threadId);
+        }
 
         private Breakpoint GetBreakpoint(IDebugBreakpoint e)
         {
@@ -447,7 +447,7 @@ namespace windbg_debug.WinDbg
             uint framesGot;
             var hr = _control.GetStackTrace(Defaults.CurrentOffset, Defaults.CurrentOffset, Defaults.CurrentOffset, frames, Defaults.MaxFrames, out framesGot);
             if (hr != HResult.Ok)
-                return new StackTraceMessageResult(resultFrames.ToArray());
+                return new StackTraceMessageResult(resultFrames);
 
             for (int frameIndex = 0; frameIndex < framesGot; frameIndex++)
             {
@@ -465,7 +465,7 @@ namespace windbg_debug.WinDbg
                 resultFrames.Add(indexedFrame);
             }
 
-            return new StackTraceMessageResult(resultFrames.ToArray());
+            return new StackTraceMessageResult(resultFrames);
         }
 
         private void EnsureIsCurrentThread(int threadId)

@@ -4,8 +4,14 @@ namespace windbg_debug
 {
     public class VSCodeLogger
     {
+        #region Fields
+
         private readonly bool _verbose;
         private readonly Action<string> _logger;
+
+        #endregion
+
+        #region Constructor
 
         public VSCodeLogger(bool verbose, Action<string> logger)
         {
@@ -16,10 +22,16 @@ namespace windbg_debug
             _logger = logger;
         }
 
+        #endregion
+
+        #region Public Methods
+
         public void Log(string text)
         {
             if (_verbose)
                 _logger(text);
         }
+
+        #endregion
     }
 }

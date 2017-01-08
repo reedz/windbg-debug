@@ -66,6 +66,22 @@ namespace windbg_debug.WinDbg
             return children.Contains(childId);
         }
 
+        private int GetTopMostParentScope(int childId)
+        {
+            foreach (var item in _children)
+            {
+                if (item.Value.Contains(childId))
+                {
+                    if (_scopes.ContainsKey(item.Key))
+                        return item.Key;
+
+                    return GetTopMostParentScope(item.Key);
+                }
+            }
+
+            return childId;
+        }
+
         #endregion
 
         #region Public Methods
@@ -204,22 +220,6 @@ namespace windbg_debug.WinDbg
         {
             var scopeId = GetTopMostParentScope(variableId);
             return GetScope(scopeId);
-        }
-
-        private int GetTopMostParentScope(int childId)
-        {
-            foreach (var item in _children)
-            {
-                if (item.Value.Contains(childId))
-                {
-                    if (_scopes.ContainsKey(item.Key))
-                        return item.Key;
-
-                    return GetTopMostParentScope(item.Key);
-                }
-            }
-
-            return childId;
         }
 
         #endregion

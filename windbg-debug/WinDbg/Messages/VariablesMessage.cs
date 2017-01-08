@@ -2,14 +2,20 @@
 {
     public class VariablesMessage : Message
     {
+        #region Constructor
+
         public VariablesMessage(int parentId)
         {
             ParentId = parentId;
         }
 
-        /// <summary>
-        /// Might be both Scope or Variable identifier.
-        /// </summary>
+        #endregion
+
+        #region Public Properties
+
+        // Might be both Scope or Variable identifier.
         public int ParentId { get; private set; }
+
+        #endregion
     }
 }

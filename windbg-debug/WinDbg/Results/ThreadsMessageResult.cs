@@ -7,6 +7,8 @@ namespace windbg_debug.WinDbg.Results
 {
     public class ThreadsMessageResult : MessageResult
     {
+        #region Constructor
+
         public ThreadsMessageResult(IEnumerable<DebuggeeThread> threads)
         {
             if (threads == null)
@@ -15,6 +17,12 @@ namespace windbg_debug.WinDbg.Results
             Threads = threads.ToArray();
         }
 
+        #endregion
+
+        #region Public Properties
+
         public IEnumerable<DebuggeeThread> Threads { get; private set; }
+
+        #endregion
     }
 }

@@ -10,10 +10,16 @@ namespace windbg_debug
 {
     class Program
     {
+        #region Fields
+
         private static CommandLineOptions _options = new CommandLineOptions();
         private static InternalLogger _logger;
 
-        static int Main(string[] args)
+        #endregion
+
+        #region Private Methods
+
+        private static int Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
@@ -89,5 +95,7 @@ namespace windbg_debug
                 }
             }).Start();
         }
+
+        #endregion
     }
 }

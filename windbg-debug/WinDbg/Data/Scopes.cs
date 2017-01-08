@@ -6,12 +6,18 @@ namespace windbg_debug.WinDbg.Data
 {
     public static class Scopes
     {
+        #region Fields
+
         private static readonly string[] _names = new[] { "Locals", "Arguments" };
         private static readonly Dictionary<string, DEBUG_SCOPE_GROUP> _scopes = new Dictionary<string, DEBUG_SCOPE_GROUP>(StringComparer.OrdinalIgnoreCase)
         {
             { "Locals", DEBUG_SCOPE_GROUP.LOCALS },
             { "Arguments", DEBUG_SCOPE_GROUP.ARGUMENTS },
         };
+
+        #endregion
+
+        #region Public Methods
 
         public static IEnumerable<string> GetNames()
         {
@@ -26,5 +32,7 @@ namespace windbg_debug.WinDbg.Data
 
             throw new Exception($"Unknown scope name: '{name}'.");
         }
+
+        #endregion
     }
 }

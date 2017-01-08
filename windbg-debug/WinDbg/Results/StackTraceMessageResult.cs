@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using windbg_debug.WinDbg.Data;
 
 namespace windbg_debug.WinDbg.Results
 {
     public class StackTraceMessageResult : MessageResult
     {
-        public StackTraceMessageResult(StackTraceFrame[] frames)
+        #region Constructor
+
+        public StackTraceMessageResult(IEnumerable<StackTraceFrame> frames)
         {
             if (frames == null)
                 throw new ArgumentNullException(nameof(frames));
@@ -13,6 +16,12 @@ namespace windbg_debug.WinDbg.Results
             Frames = frames;
         }
 
-        public StackTraceFrame[] Frames { get; private set; }
+        #endregion
+
+        #region Public Properties
+
+        public IEnumerable<StackTraceFrame> Frames { get; private set; }
+
+        #endregion
     }
 }

@@ -5,8 +5,13 @@ namespace windbg_debug.WinDbg
 {
     public class OutputCallbacks : IDebugOutputCallbacks2
     {
-        private const int CodeOk = 0;
+        #region Fields
+
         private readonly VSCodeLogger _logger;
+
+        #endregion
+
+        #region Constructor
 
         public OutputCallbacks(VSCodeLogger logger)
         {
@@ -16,24 +21,30 @@ namespace windbg_debug.WinDbg
             _logger = logger;
         }
 
+        #endregion
+
+        #region Public Methods
+
         public int GetInterestMask(out DEBUG_OUTCBI Mask)
         {
             Mask = DEBUG_OUTCBI.ANY_FORMAT;
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int Output(DEBUG_OUTPUT mask, string text)
         {
             string message = $"{mask.ToString()} :: {text}";
             _logger.Log(message);
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int Output2(DEBUG_OUTCB Which, DEBUG_OUTCBF Flags, ulong Arg, string Text)
         {
             _logger.Log($"{Which} :: {Flags} :: {Text}");
 
-            return CodeOk;
+            return HResult.Ok;
         }
+
+        #endregion
     }
 }

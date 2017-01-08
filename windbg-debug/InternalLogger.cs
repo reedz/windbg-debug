@@ -1,11 +1,16 @@
 ﻿using System;
-using System.IO;
 
 namespace windbg_debug
 {
     public class InternalLogger
     {
+        #region Fields
+
         private readonly bool _verbose;
+
+        #endregion
+
+        #region Public Methods
 
         public InternalLogger(bool verbose)
         {
@@ -17,5 +22,7 @@ namespace windbg_debug
             if (_verbose)
                 Console.Error.WriteLine(text);
         }
+
+        #endregion
     }
 }

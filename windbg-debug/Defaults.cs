@@ -5,6 +5,8 @@ namespace windbg_debug
 {
     public static class Defaults
     {
+        #region Fields
+
         public static readonly int BufferSize = 1024;
         public static readonly ulong CurrentOffset = 0;
         public static readonly DEBUG_CREATE_PROCESS DEBUG = (DEBUG_CREATE_PROCESS)DEBUG_PROCESS.DETACH_ON_EXIT;
@@ -15,5 +17,7 @@ namespace windbg_debug
         public static readonly TimeSpan Timeout = TimeSpan.FromMinutes(3);
         public static readonly uint NoParent = uint.MaxValue;
         public static readonly int NoChildren = 0;
+
+        #endregion
     }
 }

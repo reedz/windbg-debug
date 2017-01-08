@@ -5,16 +5,25 @@ namespace windbg_debug.WinDbg
 {
     public class EventCallbacks : IDebugEventCallbacksWide
     {
-        private const int CodeOk = 0;
+        #region Fields
+
         public event EventHandler<IDebugBreakpoint> BreakpointHit;
         private IDebugControl6 _control;
         public event EventHandler<EXCEPTION_RECORD64> ExceptionHit;
         public event EventHandler BreakHappened;
 
+        #endregion
+
+        #region Constructor
+
         public EventCallbacks(IDebugControl6 control)
         {
             _control = control;
         }
+
+        #endregion
+
+        #region Public Methods
 
         public int Breakpoint(IDebugBreakpoint2 breakpoint)
         {
@@ -30,8 +39,7 @@ namespace windbg_debug.WinDbg
 
         public int ChangeDebuggeeState(DEBUG_CDS Flags, ulong Argument)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int ChangeEngineState(DEBUG_CES Flags, ulong Argument)
@@ -39,13 +47,12 @@ namespace windbg_debug.WinDbg
             if (Flags == DEBUG_CES.EXECUTION_STATUS && Argument == (ulong)DEBUG_STATUS.BREAK)
                 BreakHappened?.Invoke(this, new EventArgs());
 
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int ChangeSymbolState(DEBUG_CSS Flags, ulong Argument)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int CreateProcess(ulong ImageFileHandle, ulong Handle, ulong BaseOffset, uint ModuleSize, string ModuleName, string ImageName, uint CheckSum, uint TimeDateStamp, ulong InitialThreadHandle, ulong ThreadDataOffset, ulong StartOffset)
@@ -55,8 +62,7 @@ namespace windbg_debug.WinDbg
 
         public int CreateThread(ulong Handle, ulong DataOffset, ulong StartOffset)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int Exception(ref EXCEPTION_RECORD64 Exception, uint FirstChance)
@@ -67,57 +73,49 @@ namespace windbg_debug.WinDbg
 
         public int ExitProcess(uint ExitCode)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int ExitThread(uint ExitCode)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int GetInterestMask(out DEBUG_EVENT Mask)
         {
-            Mask = DEBUG_EVENT.BREAKPOINT 
-                | DEBUG_EVENT.CHANGE_DEBUGGEE_STATE 
+            Mask = DEBUG_EVENT.BREAKPOINT
                 | DEBUG_EVENT.CHANGE_ENGINE_STATE
-                | DEBUG_EVENT.CHANGE_SYMBOL_STATE 
-                | DEBUG_EVENT.CREATE_PROCESS 
+                | DEBUG_EVENT.CREATE_PROCESS
                 | DEBUG_EVENT.CREATE_THREAD
-                | DEBUG_EVENT.EXCEPTION 
-                | DEBUG_EVENT.EXIT_PROCESS 
+                | DEBUG_EVENT.EXCEPTION
+                | DEBUG_EVENT.EXIT_PROCESS
                 | DEBUG_EVENT.EXIT_THREAD
-                | DEBUG_EVENT.LOAD_MODULE 
-                | DEBUG_EVENT.SESSION_STATUS 
-                | DEBUG_EVENT.SYSTEM_ERROR
-                | DEBUG_EVENT.UNLOAD_MODULE;
+                | DEBUG_EVENT.SESSION_STATUS
+                | DEBUG_EVENT.SYSTEM_ERROR;
 
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int LoadModule(ulong ImageFileHandle, ulong BaseOffset, uint ModuleSize, string ModuleName, string ImageName, uint CheckSum, uint TimeDateStamp)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int SessionStatus(DEBUG_SESSION Status)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int SystemError(uint Error, uint Level)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
 
         public int UnloadModule(string ImageBaseName, ulong BaseOffset)
         {
-            //throw new NotImplementedException();
-            return CodeOk;
+            return HResult.Ok;
         }
+
+        #endregion
     }
 }
