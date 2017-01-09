@@ -142,11 +142,17 @@ namespace windbg_debug.WinDbg
 
         private EvaluateMessageResult DoEvaluate(EvaluateMessage message)
         {
-            return new EvaluateMessageResult(string.Empty);
+            if (State.CurrentThread != Defaults.NoThread)
+                EnsureIsCurrentThread(State.CurrentThread);
 
-            //var result = _requestHelper.Evaluate(message.Expression);
+            if (State.CurrentFrame != Defaults.NoFrame)
+                EnsureIsCurrentFrame(State.CurrentFrame);
 
-            //return new EvaluateMessageResult(Encoding.Default.GetString(ReadValue(result)));
+            var response = _requestHelper.Evaluate(message.Expression);
+            if (response.TypeId == 0)
+               return new EvaluateMessageResult(string.Empty);
+
+            return new EvaluateMessageResult(Encoding.Default.GetString(ReadValue(response)));
         }
 
         private ScopesMessageResult DoGetScopes(ScopesMessage message)
@@ -180,6 +186,8 @@ namespace windbg_debug.WinDbg
             hr = _symbols.SetScopeFrameByIndex((uint)desiredFrame.Order);
             if (hr != HResult.Ok)
                 throw new Exception($"Couldn't get scope for frame '{frameId}' - couldn't switch frame scope.");
+
+            State.CurrentFrame = frameId;
         }
 
         private void EnsureIsCurrentScope(Scope scope)
@@ -210,6 +218,9 @@ namespace windbg_debug.WinDbg
 
             // To make sure source stepping works one line at a time.
             hr = _control.SetCodeLevel(DEBUG_LEVEL.SOURCE);
+
+            // Evaluate expressions c++ style.
+            hr = _control.SetExpressionSyntax(DEBUG_EXPR.CPLUSPLUS);
 
             return new LaunchMessageResult();
         }
@@ -570,6 +581,7 @@ namespace windbg_debug.WinDbg
             hr = _systemObjects.SetCurrentThreadId(desiredEngineId);
             if (hr != HResult.Ok)
                 throw new Exception($"Could not set desired thread ('{threadId}') - error code '{hr.ToString("X8")}'.");
+            State.CurrentThread = threadId;
         }
 
         private ThreadsMessageResult DoGetThreads()

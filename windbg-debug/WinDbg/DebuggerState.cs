@@ -19,6 +19,14 @@ namespace windbg_debug.WinDbg
         private Dictionary<int, Variable> _variables = new Dictionary<int, Variable>();
         private Dictionary<int, HashSet<int>> _children = new Dictionary<int, HashSet<int>>();
 
+
+        #endregion
+
+        #region Public Properties
+
+        public int CurrentThread { get; internal set; }
+        public int CurrentFrame { get; internal set; }
+
         #endregion
 
         #region Private Methods
@@ -142,6 +150,8 @@ namespace windbg_debug.WinDbg
             _variables.Clear();
             _threads.Clear();
             _children.Clear();
+            CurrentFrame = Defaults.NoFrame;
+            CurrentThread = Defaults.NoThread;
             _indexCounter = Defaults.FirstIndex;
         }
 

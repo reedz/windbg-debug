@@ -18,6 +18,8 @@ namespace windbg_debug
         public static readonly uint NoParent = uint.MaxValue;
         public static readonly int NoChildren = 0;
         public static readonly byte[] NoPayload = new byte[0];
+        public static readonly int NoThread = 0;
+        public static readonly int NoFrame = 0;
 
         #endregion
     }
