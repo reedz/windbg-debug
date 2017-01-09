@@ -36,14 +36,14 @@ namespace windbg_debug.WinDbg
         public int Output(DEBUG_OUTPUT mask, string text)
         {
             _buffer.Append(text);
-            DoOutput(mask, text);
+            DoOutput(text);
             return HResult.Ok;
         }
 
         public int Output2(DEBUG_OUTCB Which, DEBUG_OUTCBF Flags, ulong Arg, string Text)
         {
             _buffer.Append(Text);
-            DoOutput(Which, Text);
+            DoOutput(Text);
 
             return HResult.Ok;
         }
@@ -52,11 +52,11 @@ namespace windbg_debug.WinDbg
 
         #region Private Methods
 
-        private void DoOutput(object prefix, string text)
+        private void DoOutput(string text)
         {
             if (text.Contains("\n"))
             {
-                string message = $"{prefix} :: {_buffer.ToString()}";
+                string message = _buffer.ToString();
                 _logger.Log(message);
                 _buffer.Clear();
             }
