@@ -17,6 +17,7 @@ namespace windbg_debug
         public static readonly TimeSpan Timeout = TimeSpan.FromMinutes(3);
         public static readonly uint NoParent = uint.MaxValue;
         public static readonly int NoChildren = 0;
+        public static readonly byte[] NoPayload = new byte[0];
 
         #endregion
     }

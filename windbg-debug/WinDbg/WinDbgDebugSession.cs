@@ -176,7 +176,7 @@ namespace windbg_debug.WinDbg
 
         private StackFrame ToStackFrame(StackTraceFrame frame)
         {
-            return new StackFrame(frame.Order, $"StackFrame#{frame.Order}", new Source(frame.FilePath), frame.Line, 0);
+            return new StackFrame(frame.Id, $"StackFrame#{frame.Order}", new Source(frame.FilePath), frame.Line, 0);
         }
 
         public override void StepIn(Response response, dynamic arguments)

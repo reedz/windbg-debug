@@ -82,6 +82,29 @@ namespace windbg_debug.WinDbg
             return childId;
         }
 
+        private T GetItem<T>(int itemId, Dictionary<int, T> container)
+        {
+            T result;
+            if (container.TryGetValue(itemId, out result))
+                return result;
+
+            return default(T);
+        }
+
+        private T AddItem<T>(Func<int, T> factory, Dictionary<int, T> container, int parentId)
+        {
+            if (factory == null)
+                throw new ArgumentNullException(nameof(factory));
+
+            var index = GetNewIndex();
+            AddConnection(parentId, index);
+
+            var result = factory(index);
+            container.Add(index, result);
+
+            return result;
+        }
+
         #endregion
 
         #region Public Methods
@@ -133,50 +156,29 @@ namespace windbg_debug.WinDbg
             }
         }
 
+        public DebuggeeThread GetThread(int threadId)
+        {
+            return GetItem(threadId, _threads);
+        }
+
         public StackTraceFrame AddFrame(int threadId, Func<int, StackTraceFrame> factory)
         {
-            if (factory == null)
-                throw new ArgumentNullException(nameof(factory));
-
-            var index = GetNewIndex();
-            AddConnection(threadId, index);
-            
-            var result = factory(index);
-            _frames.Add(index, result);
-
-            return result;
+            return AddItem(factory, _frames, threadId);
         }
 
         public StackTraceFrame GetFrame(int frameId)
         {
-            StackTraceFrame result;
-            if (_frames.TryGetValue(frameId, out result))
-                return result;
-
-            return null;
+            return GetItem(frameId, _frames);
         }
 
         public Scope AddScope(int frameId, Func<int, Scope> factory)
         {
-            if (factory == null)
-                throw new ArgumentNullException(nameof(factory));
-
-            var index = GetNewIndex();
-            AddConnection(frameId, index);
-
-            var result = factory(index);
-            _scopes.Add(index, result);
-
-            return result;
+            return AddItem(factory, _scopes, frameId);
         }
 
         public Scope GetScope(int scopeId)
         {
-            Scope result;
-            if (_scopes.TryGetValue(scopeId, out result))
-                return result;
-
-            return null;
+            return GetItem(scopeId, _scopes);
         }
 
         public IDebugSymbolGroup2 GetSymbolsForScope(int scopeId)
@@ -195,31 +197,30 @@ namespace windbg_debug.WinDbg
 
         public Variable AddVariable(int parentId, Func<int, Variable> factory)
         {
-            if (factory == null)
-                throw new ArgumentNullException(nameof(factory));
-
-            var index = GetNewIndex();
-            AddConnection(parentId, index);
-
-            var result = factory(index);
-            _variables.Add(index, result);
-
-            return result;
+            return AddItem(factory, _variables, parentId);
         }
 
         public Variable GetVariable(int variableId)
         {
-            Variable result;
-            if (_variables.TryGetValue(variableId, out result))
-                return result;
+            return GetItem(variableId, _variables);
+        }
 
-            return null;
+        public DebuggeeThread GetThreadForFrame(int frameId)
+        {
+            var threadId = _children.FirstOrDefault(x => x.Value.Contains(frameId)).Key;
+            return GetThread(threadId);
         }
 
         public Scope GetScopeForVariable(int variableId)
         {
             var scopeId = GetTopMostParentScope(variableId);
             return GetScope(scopeId);
+        }
+
+        public StackTraceFrame GetFrameForScope(int scopeId)
+        {
+            var frameId = _children.FirstOrDefault(x => x.Value.Contains(scopeId)).Key;
+            return GetFrame(frameId);
         }
 
         #endregion

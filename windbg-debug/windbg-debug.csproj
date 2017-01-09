@@ -97,6 +97,7 @@
     <Compile Include="WinDbg\Messages\VariablesMessage.cs" />
     <Compile Include="WinDbg\NativeMethods.cs" />
     <Compile Include="WinDbg\OutputCallbacks.cs" />
+    <Compile Include="WinDbg\RequestHelper.cs" />
     <Compile Include="WinDbg\Results\EvaluateMessageResult.cs" />
     <Compile Include="WinDbg\Results\LaunchMessageResult.cs" />
     <Compile Include="WinDbg\Results\MessageResult.cs" />

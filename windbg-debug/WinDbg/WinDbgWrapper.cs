@@ -22,7 +22,8 @@ namespace windbg_debug.WinDbg
         private readonly Dictionary<Type, Func<Message, MessageResult>> _handlers = new Dictionary<Type, Func<Message, MessageResult>>();
         private readonly VSCodeLogger _logger;
         private int _lastBreakpointId = 1;
-
+        [ThreadStatic]
+        private RequestHelper _requestHelper;
         [ThreadStatic]
         private IDebugClient6 _debugger;
         [ThreadStatic]
@@ -35,6 +36,7 @@ namespace windbg_debug.WinDbg
         private IDebugControl6 _control;
         [ThreadStatic]
         private IDebugSystemObjects3 _systemObjects;
+        private IDebugDataSpaces4 _spaces;
 
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
@@ -140,12 +142,11 @@ namespace windbg_debug.WinDbg
 
         private EvaluateMessageResult DoEvaluate(EvaluateMessage message)
         {
-            DEBUG_VALUE value;
-            uint remainderIndex;
-
-            var hr = _control.Evaluate(message.Expression, DEBUG_VALUE_TYPE.INVALID, out value, out remainderIndex);
-
             return new EvaluateMessageResult(string.Empty);
+
+            //var result = _requestHelper.Evaluate(message.Expression);
+
+            //return new EvaluateMessageResult(Encoding.Default.GetString(ReadValue(result)));
         }
 
         private ScopesMessageResult DoGetScopes(ScopesMessage message)
@@ -162,6 +163,9 @@ namespace windbg_debug.WinDbg
 
         private void EnsureIsCurrentFrame(int frameId)
         {
+            var thread = State.GetThreadForFrame(frameId);
+            EnsureIsCurrentThread(thread.Id);
+
             uint actualFrameIndex;
             var hr = _symbols.GetCurrentScopeFrameIndex(out actualFrameIndex);
 
@@ -176,6 +180,12 @@ namespace windbg_debug.WinDbg
             hr = _symbols.SetScopeFrameByIndex((uint)desiredFrame.Order);
             if (hr != HResult.Ok)
                 throw new Exception($"Couldn't get scope for frame '{frameId}' - couldn't switch frame scope.");
+        }
+
+        private void EnsureIsCurrentScope(Scope scope)
+        {
+            var frame = State.GetFrameForScope(scope.Id);
+            EnsureIsCurrentFrame(frame.Id);
         }
 
         private LaunchMessageResult DoLaunch(LaunchMessage message)
@@ -348,7 +358,7 @@ namespace windbg_debug.WinDbg
                 return DoGetVariablesByVariableId(parentId);
             else
                 return DoGetVariablesByScope(scope);
-            
+
         }
 
         private VariablesMessageResult DoGetVariablesByVariableId(int variableId)
@@ -415,9 +425,72 @@ namespace windbg_debug.WinDbg
 
                 var variable = State.AddVariable(parentId, (id) => new Variable(id, variableName, typeName, value, hasChildren, variableIndex));
                 result.Add(variable);
+
+                //var requestData = _requestHelper.CreateTypedData(entry.ModuleBase, entry.Offset, entry.TypeId);
+                //byte[] typedValue = ReadValue(requestData);
+                //_logger.Log($"TAG --- '{variableName}' = '{Enum.GetName(typeof(SymTag), requestData.Tag)}'");
+                //_logger.Log($"VALUE --- '{variableName}' = '{Encoding.Default.GetString(typedValue)}'");
+                //if ((requestData.Tag == (uint)SymTag.PointerType))
+                //{
+                //    var dereferencedValue = _requestHelper.Dereference(requestData);
+                //    typedValue = ReadValue(dereferencedValue);
+
+                //    if (dereferencedValue.Tag == (uint)SymTag.UDT)
+                //    {
+                //        var fieldValues = ReadAllFieldsValues(dereferencedValue);
+                //    }
+
+                //    _logger.Log($"TAG --- '{variableName}'(deref) = '{Enum.GetName(typeof(SymTag), dereferencedValue.Tag)}'");
+                //    _logger.Log($"VALUE --- '{variableName}'(deref) = '{Encoding.Default.GetString(typedValue)}'");
+                //}
+
+
             }
 
             return result;
+        }
+
+        private Dictionary<string, Tuple<_DEBUG_TYPED_DATA, byte[]>> ReadAllFieldsValues(_DEBUG_TYPED_DATA dereferencedValue)
+        {
+            var allFields = ReadAllFields(dereferencedValue);
+            var result = new Dictionary<string, Tuple<_DEBUG_TYPED_DATA, byte[]>>();
+            foreach (var field in allFields)
+            {
+                var response = _requestHelper.GetField(dereferencedValue, field);
+                var responseValue = ReadValue(response);
+                result.Add(field, new Tuple<_DEBUG_TYPED_DATA, byte[]>(response, responseValue));
+            }
+
+            return result;
+        }
+
+        private string[] ReadAllFields(_DEBUG_TYPED_DATA dereferencedValue)
+        {
+            List<string> result = new List<string>();
+            StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
+            uint nameSize;
+            var hr = HResult.Ok;
+            uint fieldIndex = 0;
+            do
+            {
+                result.Add(buffer.ToString());
+                hr = _symbols.GetFieldNameWide(dereferencedValue.ModBase, dereferencedValue.TypeId, fieldIndex, buffer, Defaults.BufferSize, out nameSize);
+                fieldIndex++;
+            }
+            while (hr == HResult.Ok);
+
+            return result.ToArray();
+        }
+
+        private byte[] ReadValue(_DEBUG_TYPED_DATA typedData)
+        {
+            var valueBuffer = new byte[typedData.Size];
+            uint bytesRead;
+            _spaces.ReadVirtual(typedData.Offset, valueBuffer, typedData.Size, out bytesRead);
+            var valueTrimmed = new byte[bytesRead];
+            Array.Copy(valueBuffer, valueTrimmed, bytesRead);
+
+            return valueTrimmed;
         }
 
         private static bool IsChild(uint parentSymbolListIndex, DEBUG_SYMBOL_PARAMETERS[] parameters, uint variableIndex)
@@ -427,12 +500,22 @@ namespace windbg_debug.WinDbg
 
         private VariablesMessageResult DoGetVariablesByScope(Scope scope)
         {
+            EnsureIsCurrentScope(scope);
             IDebugSymbolGroup2 group;
             IDebugSymbolGroup2 oldGroup = State.GetSymbolsForScope(scope.Id);
+            uint oldItemsCount = 0;
+            if (oldGroup != null)
+                oldGroup.GetNumberSymbols(out oldItemsCount);
+
             var hr = _symbols.GetScopeSymbolGroup2(Scopes.GetScopeByName(scope.Name), oldGroup, out group);
             if (hr != HResult.Ok)
                 return new VariablesMessageResult(Enumerable.Empty<Variable>());
             State.UpdateSymbolGroup(scope.Id, group);
+            uint newItemsCount = 0;
+            group.GetNumberSymbols(out newItemsCount);
+
+            if (oldItemsCount == newItemsCount)
+                return new VariablesMessageResult(State.GetVariablesByScope(scope.Id));
 
             var result = DoGetVariablesFromSymbols(group, 0, Defaults.NoParent, scope.Id);
             return new VariablesMessageResult(result);
@@ -460,7 +543,7 @@ namespace windbg_debug.WinDbg
                     continue;
 
                 var indexedFrame = State.AddFrame(
-                    threadId, 
+                    threadId,
                     (id) => new StackTraceFrame(id, frame.InstructionOffset, (int)line, filePath.ToString(), (int)frame.FrameNumber));
                 resultFrames.Add(indexedFrame);
             }
@@ -514,6 +597,9 @@ namespace windbg_debug.WinDbg
             _control = _debugger as IDebugControl6;
             _symbols = _debugger as IDebugSymbols5;
             _systemObjects = _debugger as IDebugSystemObjects3;
+            _advanced = _debugger as IDebugAdvanced3;
+            _requestHelper = new RequestHelper(_advanced);
+            _spaces = _debugger as IDebugDataSpaces4;
 
             _callbacks = new EventCallbacks(_control);
             _callbacks.BreakpointHit += OnBreakpoint;
