@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using windbg_debug.WinDbg.Data;
 using windbg_debug.WinDbg.Messages;
 using windbg_debug.WinDbg.Results;
+using windbg_debug.WinDbg.Visualizers;
 
 namespace windbg_debug.WinDbg
 {
@@ -36,7 +37,12 @@ namespace windbg_debug.WinDbg
         private IDebugControl6 _control;
         [ThreadStatic]
         private IDebugSystemObjects3 _systemObjects;
+        [ThreadStatic]
         private IDebugDataSpaces4 _spaces;
+        [ThreadStatic]
+        private VisualizerRegistry _visualizers;
+        [ThreadStatic]
+        private OutputCallbacks _output;
 
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
@@ -378,20 +384,16 @@ namespace windbg_debug.WinDbg
             if (parentVariable == null)
                 return new VariablesMessageResult(Enumerable.Empty<Variable>());
 
-            var scope = State.GetScopeForVariable(variableId);
-            if (scope == null)
-                return new VariablesMessageResult(Enumerable.Empty<Variable>());
+            var parentDescription = State.GetVariableDescription(variableId);
+            var result = _visualizers.GetChildren(parentDescription);
+            var actualResult = new List<Variable>();
+            foreach (var pair in result)
+            {
+                var variable = State.AddVariable(variableId, (id) => new Variable(id, pair.Key.Name, pair.Key.TypeName, pair.Value.Value, pair.Value.HasChildren), pair.Key.Entry);
+                actualResult.Add(variable);
+            }
 
-            var symbols = State.GetSymbolsForScope(scope.Id);
-            if (symbols == null)
-                return new VariablesMessageResult(Enumerable.Empty<Variable>());
-
-            var hr = symbols.ExpandSymbol(parentVariable.SymbolListIndex, true);
-            if (hr != HResult.Ok)
-                return new VariablesMessageResult(Enumerable.Empty<Variable>());
-
-            var result = DoGetVariablesFromSymbols(symbols, parentVariable.SymbolListIndex + 1, parentVariable.SymbolListIndex, parentVariable.Id);
-            return new VariablesMessageResult(result);
+            return new VariablesMessageResult(actualResult);
         }
 
         private IEnumerable<Variable> DoGetVariablesFromSymbols(IDebugSymbolGroup2 symbols, uint startIndex, uint parentSymbolListIndex, int parentId)
@@ -412,6 +414,9 @@ namespace windbg_debug.WinDbg
                 if (parentSymbolListIndex != Defaults.NoParent && !IsChild(parentSymbolListIndex, parameters, variableIndex))
                     continue;
 
+                DEBUG_SYMBOL_ENTRY entry;
+                symbols.GetSymbolEntryInformation(variableIndex, out entry);
+
                 StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
                 uint nameSize;
 
@@ -430,67 +435,28 @@ namespace windbg_debug.WinDbg
                     continue;
                 var value = buffer.ToString();
 
-                bool hasChildren = false;
-                if (parameters.Length > variableIndex)
-                    hasChildren = parameters[variableIndex].SubElements > 0;
+                var typedData = _requestHelper.CreateTypedData(entry.ModuleBase, entry.Offset, entry.TypeId);
+                VisualizationResult handledVariable;
+                Variable variable;
+                if (_visualizers.TryHandle(new VariableMetaData(variableName, typeName, typedData), out handledVariable))
+                {
+                    variable = State.AddVariable(
+                        parentId, 
+                        (id) => new Variable(id, variableName, typeName, handledVariable.Value , handledVariable.HasChildren),
+                        typedData);
+                }
+                else
+                {
+                    bool hasChildren = false;
+                    if (parameters.Length > variableIndex)
+                        hasChildren = parameters[variableIndex].SubElements > 0;
 
-                var variable = State.AddVariable(parentId, (id) => new Variable(id, variableName, typeName, value, hasChildren, variableIndex));
+                    variable = State.AddVariable(parentId, (id) => new Variable(id, variableName, typeName, value, hasChildren), typedData);
+                }
                 result.Add(variable);
-
-                //var requestData = _requestHelper.CreateTypedData(entry.ModuleBase, entry.Offset, entry.TypeId);
-                //byte[] typedValue = ReadValue(requestData);
-                //_logger.Log($"TAG --- '{variableName}' = '{Enum.GetName(typeof(SymTag), requestData.Tag)}'");
-                //_logger.Log($"VALUE --- '{variableName}' = '{Encoding.Default.GetString(typedValue)}'");
-                //if ((requestData.Tag == (uint)SymTag.PointerType))
-                //{
-                //    var dereferencedValue = _requestHelper.Dereference(requestData);
-                //    typedValue = ReadValue(dereferencedValue);
-
-                //    if (dereferencedValue.Tag == (uint)SymTag.UDT)
-                //    {
-                //        var fieldValues = ReadAllFieldsValues(dereferencedValue);
-                //    }
-
-                //    _logger.Log($"TAG --- '{variableName}'(deref) = '{Enum.GetName(typeof(SymTag), dereferencedValue.Tag)}'");
-                //    _logger.Log($"VALUE --- '{variableName}'(deref) = '{Encoding.Default.GetString(typedValue)}'");
-                //}
-
-
             }
 
             return result;
-        }
-
-        private Dictionary<string, Tuple<_DEBUG_TYPED_DATA, byte[]>> ReadAllFieldsValues(_DEBUG_TYPED_DATA dereferencedValue)
-        {
-            var allFields = ReadAllFields(dereferencedValue);
-            var result = new Dictionary<string, Tuple<_DEBUG_TYPED_DATA, byte[]>>();
-            foreach (var field in allFields)
-            {
-                var response = _requestHelper.GetField(dereferencedValue, field);
-                var responseValue = ReadValue(response);
-                result.Add(field, new Tuple<_DEBUG_TYPED_DATA, byte[]>(response, responseValue));
-            }
-
-            return result;
-        }
-
-        private string[] ReadAllFields(_DEBUG_TYPED_DATA dereferencedValue)
-        {
-            List<string> result = new List<string>();
-            StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
-            uint nameSize;
-            var hr = HResult.Ok;
-            uint fieldIndex = 0;
-            do
-            {
-                result.Add(buffer.ToString());
-                hr = _symbols.GetFieldNameWide(dereferencedValue.ModBase, dereferencedValue.TypeId, fieldIndex, buffer, Defaults.BufferSize, out nameSize);
-                fieldIndex++;
-            }
-            while (hr == HResult.Ok);
-
-            return result.ToArray();
         }
 
         private byte[] ReadValue(_DEBUG_TYPED_DATA typedData)
@@ -610,8 +576,10 @@ namespace windbg_debug.WinDbg
             _symbols = _debugger as IDebugSymbols5;
             _systemObjects = _debugger as IDebugSystemObjects3;
             _advanced = _debugger as IDebugAdvanced3;
-            _requestHelper = new RequestHelper(_advanced);
             _spaces = _debugger as IDebugDataSpaces4;
+            _requestHelper = new RequestHelper(_advanced, _spaces, _symbols);
+            _visualizers = new VisualizerRegistry();
+            _output = new OutputCallbacks(_logger);
 
             _callbacks = new EventCallbacks(_control);
             _callbacks.BreakpointHit += OnBreakpoint;
@@ -619,10 +587,21 @@ namespace windbg_debug.WinDbg
             _callbacks.BreakHappened += OnBreak;
 
             _debugger.SetEventCallbacksWide(_callbacks);
-            _debugger.SetOutputCallbacksWide(new OutputCallbacks(_logger));
+            _debugger.SetOutputCallbacksWide(_output);
             _debugger.SetInputCallbacks(new InputCallbacks());
 
             InitializeHandlers();
+            InitializeVisualizers();
+        }
+
+        private void InitializeVisualizers()
+        {
+            _visualizers.AddVisualizer(new RustStringVisualizer(_requestHelper, _symbols, _visualizers));
+            _visualizers.AddVisualizer(new RustWtf8Visualizer(_requestHelper, _symbols, _visualizers));
+            _visualizers.AddVisualizer(new RustVectorVisualizer(_requestHelper, _symbols, _visualizers));
+            _visualizers.AddVisualizer(new RustSliceVisualizer(_requestHelper, _symbols, _visualizers));
+
+            _visualizers.SetDefaultVisualizer(new DefaultVisualizer(_requestHelper, _symbols, _visualizers, _output));
         }
 
         private void OnBreak(object sender, EventArgs e)

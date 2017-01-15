@@ -20,6 +20,9 @@ namespace windbg_debug
         public static readonly byte[] NoPayload = new byte[0];
         public static readonly int NoThread = 0;
         public static readonly int NoFrame = 0;
+        public static readonly int MaxStringSize = 200;
+        public static readonly int NotFound = -1;
+        public static readonly string UnknownValue = "<Unknown>";
 
         #endregion
     }

@@ -67,6 +67,7 @@
     <Compile Include="ReturnCodes.cs" />
     <Compile Include="VsCodeBase\Utilities.cs" />
     <Compile Include="VSCodeLogger.cs" />
+    <Compile Include="WinDbg\Data\BasicType.cs" />
     <Compile Include="WinDbg\Data\Breakpoint.cs" />
     <Compile Include="WinDbg\Data\DebuggeeThread.cs" />
     <Compile Include="WinDbg\Data\Delegates.cs" />
@@ -75,7 +76,9 @@
     <Compile Include="WinDbg\Data\Scope.cs" />
     <Compile Include="WinDbg\Data\Scopes.cs" />
     <Compile Include="WinDbg\Data\StackTraceFrame.cs" />
+    <Compile Include="WinDbg\Data\TypedVariable.cs" />
     <Compile Include="WinDbg\Data\Variable.cs" />
+    <Compile Include="WinDbg\Data\VariableDescription.cs" />
     <Compile Include="WinDbg\DebuggerState.cs" />
     <Compile Include="WinDbg\ErrorCodes.cs" />
     <Compile Include="WinDbg\EventCallbacks.cs" />
@@ -107,6 +110,14 @@
     <Compile Include="WinDbg\Results\TerminateMessageResult.cs" />
     <Compile Include="WinDbg\Results\ThreadsMessageResult.cs" />
     <Compile Include="WinDbg\Results\VariablesMessageResult.cs" />
+    <Compile Include="WinDbg\Visualizers\DefaultVisualizer.cs" />
+    <Compile Include="WinDbg\Data\VisualizationResult.cs" />
+    <Compile Include="WinDbg\Visualizers\VisualizerBase.cs" />
+    <Compile Include="WinDbg\Visualizers\RustSliceVisualizer.cs" />
+    <Compile Include="WinDbg\Visualizers\RustStringVisualizer.cs" />
+    <Compile Include="WinDbg\Visualizers\RustVectorVisualizer.cs" />
+    <Compile Include="WinDbg\Visualizers\RustWtf8Visualizer.cs" />
+    <Compile Include="WinDbg\Visualizers\VisualizerRegistry.cs" />
     <Compile Include="WinDbg\WinDbgDebugSession.cs" />
     <Compile Include="WinDbg\WinDbgWrapper.cs" />
   </ItemGroup>

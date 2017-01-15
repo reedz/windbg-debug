@@ -18,6 +18,7 @@ namespace windbg_debug.WinDbg
         private Dictionary<int, DebuggeeThread> _threads = new Dictionary<int, DebuggeeThread>();
         private Dictionary<int, Variable> _variables = new Dictionary<int, Variable>();
         private Dictionary<int, HashSet<int>> _children = new Dictionary<int, HashSet<int>>();
+        private Dictionary<int, VariableMetaData> _variableDescriptions = new Dictionary<int, VariableMetaData>();
 
 
         #endregion
@@ -205,9 +206,12 @@ namespace windbg_debug.WinDbg
             _symbolGroups[id] = group;
         }
 
-        public Variable AddVariable(int parentId, Func<int, Variable> factory)
+        public Variable AddVariable(int parentId, Func<int, Variable> factory, _DEBUG_TYPED_DATA entry)
         {
-            return AddItem(factory, _variables, parentId);
+            var result = AddItem(factory, _variables, parentId);
+            _variableDescriptions[result.Id] = new VariableMetaData(result.Name, result.Type, entry);
+
+            return result;
         }
 
         public Variable GetVariable(int variableId)
@@ -231,6 +235,11 @@ namespace windbg_debug.WinDbg
         {
             var frameId = _children.FirstOrDefault(x => x.Value.Contains(scopeId)).Key;
             return GetFrame(frameId);
+        }
+
+        public VariableMetaData GetVariableDescription(int variableId)
+        {
+            return GetItem(variableId, _variableDescriptions);
         }
 
         #endregion

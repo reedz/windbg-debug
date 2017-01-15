@@ -10,6 +10,7 @@ namespace windbg_debug.WinDbg
 
         private readonly VSCodeLogger _logger;
         private readonly StringBuilder _buffer = new StringBuilder();
+        private bool _isCatching = false;
 
         #endregion
 
@@ -48,12 +49,29 @@ namespace windbg_debug.WinDbg
             return HResult.Ok;
         }
 
+        public void Catch()
+        {
+            _isCatching = true;
+        }
+
+        public string StopCatching()
+        {
+            var result = _buffer.ToString();
+            _buffer.Clear();
+            _isCatching = false;
+
+            return result;
+        }
+
         #endregion
 
         #region Private Methods
 
         private void DoOutput(string text)
         {
+            if (_isCatching)
+                return;
+
             if (text.Contains("\n"))
             {
                 string message = _buffer.ToString();

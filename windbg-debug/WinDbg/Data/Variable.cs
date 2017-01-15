@@ -4,14 +4,13 @@
     {
         #region Constructor
 
-        public Variable(int id, string name, string type, string value, bool hasChildren, uint symbolListIndex)
+        public Variable(int id, string name, string type, string value, bool hasChildren)
         {
             Name = name;
             Type = type;
             Value = value;
             Id = id;
             HasChildren = hasChildren;
-            SymbolListIndex = symbolListIndex;
         }
 
         #endregion
@@ -23,7 +22,6 @@
         public string Type { get; private set; }
         public string Value { get; private set; }
         public bool HasChildren { get; private set; }
-        public uint SymbolListIndex { get; private set; }
 
         #endregion
     }

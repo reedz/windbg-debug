@@ -1,7 +1,10 @@
 ﻿using Microsoft.Diagnostics.Runtime.Interop;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using windbg_debug.WinDbg.Data;
 
 namespace windbg_debug.WinDbg
 {
@@ -12,16 +15,30 @@ namespace windbg_debug.WinDbg
         [ThreadStatic]
         private readonly IDebugAdvanced3 _advanced;
 
+        [ThreadStatic]
+        private readonly IDebugDataSpaces4 _spaces;
+
+        [ThreadStatic]
+        private readonly IDebugSymbols5 _symbols;
+
         #endregion
 
         #region Constructor
 
-        public RequestHelper(IDebugAdvanced3 advanced)
+        public RequestHelper(IDebugAdvanced3 advanced, IDebugDataSpaces4 spaces, IDebugSymbols5 symbols)
         {
             if (advanced == null)
                 throw new ArgumentNullException(nameof(advanced));
 
+            if (spaces == null)
+                throw new ArgumentNullException(nameof(spaces));
+
+            if (symbols== null)
+                throw new ArgumentNullException(nameof(symbols));
+
             _advanced = advanced;
+            _spaces = spaces;
+            _symbols = symbols;
         }
 
         #endregion
@@ -59,6 +76,18 @@ namespace windbg_debug.WinDbg
             return PerformRequest(result, Defaults.NoPayload);
         }
 
+        public _EXT_TYPED_DATA OutputShortValue(_DEBUG_TYPED_DATA typedData)
+        {
+            var result = new _EXT_TYPED_DATA();
+            result.Operation = _EXT_TDOP.EXT_TDOP_OUTPUT_SIMPLE_VALUE;
+            result.InData = typedData;
+
+            // will be populated
+            result.Status = 0;
+
+            return PerformRequest(result, Defaults.NoPayload);
+        }
+
         public _DEBUG_TYPED_DATA Evaluate(string toEvaluate)
         {
             var result = new _EXT_TYPED_DATA();
@@ -68,6 +97,17 @@ namespace windbg_debug.WinDbg
             result.InStrIndex = (uint)Marshal.SizeOf(result);
 
             return PerformRequest(result, Encoding.Default.GetBytes(toEvaluate)).OutData;
+        }
+
+        public _DEBUG_TYPED_DATA GetArrayItem(_DEBUG_TYPED_DATA pointer, ulong index)
+        {
+            var result = new _EXT_TYPED_DATA();
+            result.Operation = _EXT_TDOP.EXT_TDOP_GET_ARRAY_ELEMENT;
+            result.InData = pointer;
+            result.In64 = index;
+
+            var response = PerformRequest(result, Defaults.NoPayload);
+            return response.OutData;
         }
 
         public _DEBUG_TYPED_DATA Dereference(_DEBUG_TYPED_DATA typedData)
@@ -86,7 +126,7 @@ namespace windbg_debug.WinDbg
         public _DEBUG_TYPED_DATA GetField(_DEBUG_TYPED_DATA typedData, string field)
         {
             var result = new _EXT_TYPED_DATA();
-            result.Operation = _EXT_TDOP.EXT_TDOP_GET_DEREFERENCE;
+            result.Operation = _EXT_TDOP.EXT_TDOP_GET_FIELD;
             result.InData = typedData;
             result.InStrIndex = (uint)Marshal.SizeOf(result);
             // will be populated
@@ -95,6 +135,62 @@ namespace windbg_debug.WinDbg
 
             var response = PerformRequest(result, Encoding.Default.GetBytes(field));
             return response.OutData;
+        }
+
+        public byte[] ReadValue(ulong offset, uint size)
+        {
+            var buffer = new byte[size];
+            uint actualBytes;
+            var hr = _spaces.ReadVirtual(offset, buffer, size, out actualBytes);
+            if (hr != HResult.Ok)
+                return new byte[0];
+
+            return buffer;
+        }
+
+        public string ReadString(ulong offset, uint size)
+        {
+            var buffer = new StringBuilder((int)size);
+            uint actualBytes;
+            var hr = _spaces.ReadUnicodeStringVirtual(offset, size, CODE_PAGE.UTF8, buffer, size, out actualBytes);
+            if (hr != HResult.Ok)
+                return string.Empty;
+
+            return buffer.ToString();
+        }
+
+        public string[] ReadFieldNames(_DEBUG_TYPED_DATA data)
+        {
+            List<string> result = new List<string>();
+            StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
+            uint nameSize;
+            uint fieldIndex = 0;
+            var hr = _symbols.GetFieldNameWide(data.ModBase, data.TypeId, fieldIndex, buffer, Defaults.BufferSize, out nameSize); ;
+            while (hr == HResult.Ok)
+            {
+                result.Add(buffer.ToString());
+                fieldIndex++;
+                hr = _symbols.GetFieldNameWide(data.ModBase, data.TypeId, fieldIndex, buffer, Defaults.BufferSize, out nameSize);
+            }
+
+            return result.ToArray();
+        }
+
+        public TypedVariable ReadVariable(_DEBUG_TYPED_DATA data)
+        {
+            _DEBUG_TYPED_DATA dereferenced = default(_DEBUG_TYPED_DATA);
+            bool isDereferenced = false;
+            if (data.Tag == (uint)SymTag.PointerType)
+            {
+                dereferenced = Dereference(data);
+                isDereferenced = true;
+            }
+
+            var dataToOperate = isDereferenced ? dereferenced : data;
+            var fieldNames = ReadFieldNames(dataToOperate);
+            var fields = fieldNames.Select(x => new KeyValuePair<string, TypedVariable>(x, ReadVariable(GetField(dataToOperate, x)))).ToDictionary(x => x.Key, x => x.Value);
+
+            return new TypedVariable(data, dereferenced, fields);
         }
 
         #endregion
