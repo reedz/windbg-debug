@@ -112,6 +112,7 @@
     <Compile Include="WinDbg\Results\VariablesMessageResult.cs" />
     <Compile Include="WinDbg\Visualizers\DefaultVisualizer.cs" />
     <Compile Include="WinDbg\Data\VisualizationResult.cs" />
+    <Compile Include="WinDbg\Visualizers\RustEnumVisualizer.cs" />
     <Compile Include="WinDbg\Visualizers\VisualizerBase.cs" />
     <Compile Include="WinDbg\Visualizers\RustSliceVisualizer.cs" />
     <Compile Include="WinDbg\Visualizers\RustStringVisualizer.cs" />

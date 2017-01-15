@@ -36,7 +36,7 @@ namespace windbg_debug.WinDbg.Visualizers
 
         protected override VisualizationResult DoHandle(VariableMetaData meta)
         {
-            var typedData = ToTypedData(meta);
+            var typedData = meta.Entry;
 
             var bigString = ReadString(typedData.Offset, (uint)Defaults.MaxStringSize);
             var endIndex = bigString.IndexOf('\0');

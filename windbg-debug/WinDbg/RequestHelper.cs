@@ -137,6 +137,19 @@ namespace windbg_debug.WinDbg
             return response.OutData;
         }
 
+        public _DEBUG_TYPED_DATA OutputTypeDefinition(_DEBUG_TYPED_DATA typedData)
+        {
+            var result = new _EXT_TYPED_DATA();
+            result.Operation = _EXT_TDOP.EXT_TDOP_OUTPUT_TYPE_DEFINITION;
+            result.InData = typedData;
+            // will be populated
+            result.Status = 0;
+            // result.OutData = ...
+
+            var response = PerformRequest(result, Defaults.NoPayload);
+            return response.OutData;
+        }
+
         public byte[] ReadValue(ulong offset, uint size)
         {
             var buffer = new byte[size];
@@ -188,14 +201,33 @@ namespace windbg_debug.WinDbg
 
             var dataToOperate = isDereferenced ? dereferenced : data;
             var fieldNames = ReadFieldNames(dataToOperate);
-            var fields = fieldNames.Select(x => new KeyValuePair<string, TypedVariable>(x, ReadVariable(GetField(dataToOperate, x)))).ToDictionary(x => x.Key, x => x.Value);
+            var fields = fieldNames.Select(x => new KeyValuePair<string, TypedVariable>(x, ReadVariable(GetField(dataToOperate, x))));//.ToDictionary(x => x.Key, x => x.Value);
+            var fieldsMap = new Dictionary<string, TypedVariable>();
+            foreach (var pair in fields)
+            {
+                var key = GetKey(fieldsMap, pair.Key);
+                fieldsMap.Add(key, pair.Value);
+            }
 
-            return new TypedVariable(data, dereferenced, fields);
+            return new TypedVariable(data, dereferenced, fieldsMap);
         }
 
         #endregion
 
         #region Private Methods
+
+        private static string GetKey(Dictionary<string, TypedVariable> fieldsMap, string baseKey)
+        {
+            var key = baseKey;
+            int counter = 1;
+            while (fieldsMap.ContainsKey(key))
+            {
+                key = $"{baseKey}_{counter}";
+                counter++;
+            }
+
+            return key;
+        }
 
         private static byte[] ToBytes(_EXT_TYPED_DATA data, byte[] additional)
         {

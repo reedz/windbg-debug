@@ -40,19 +40,19 @@ namespace windbg_debug.WinDbg.Visualizers
 
         #region Public Methods
 
-        public bool CanHandle(VariableMetaData description)
+        public bool CanHandle(VariableMetaData meta)
         {
-            return DoCanHandle(description);
+            return DoCanHandle(meta);
         }
 
-        public VisualizationResult Handle(VariableMetaData description)
+        public VisualizationResult Handle(VariableMetaData meta)
         {
-            return DoHandle(description);
+            return DoHandle(meta);
         }
 
-        public IReadOnlyDictionary<VariableMetaData, VisualizationResult> GetChildren(VariableMetaData description)
+        public IReadOnlyDictionary<VariableMetaData, VisualizationResult> GetChildren(VariableMetaData meta)
         {
-            var result = DoGetChildren(description);
+            var result = DoGetChildren(meta);
 
             return new ReadOnlyDictionary<VariableMetaData, VisualizationResult>(result);
         }
@@ -60,11 +60,6 @@ namespace windbg_debug.WinDbg.Visualizers
         #endregion
 
         #region Protected Methods
-
-        protected _DEBUG_TYPED_DATA ToTypedData(VariableMetaData meta)
-        {
-            return _helper.CreateTypedData(meta.Entry.ModBase, meta.Entry.Offset, meta.Entry.TypeId);
-        }
 
         protected string GetTypeName(_DEBUG_TYPED_DATA typedData)
         {
@@ -95,9 +90,9 @@ namespace windbg_debug.WinDbg.Visualizers
             return result;
         }
 
-        protected abstract bool DoCanHandle(VariableMetaData description);
-        protected abstract VisualizationResult DoHandle(VariableMetaData description);
-        protected abstract Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData description);
+        protected abstract bool DoCanHandle(VariableMetaData meta);
+        protected abstract VisualizationResult DoHandle(VariableMetaData meta);
+        protected abstract Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta);
 
         #endregion
 

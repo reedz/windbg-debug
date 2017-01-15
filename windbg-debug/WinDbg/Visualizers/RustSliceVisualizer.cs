@@ -28,9 +28,9 @@ namespace windbg_debug.WinDbg.Visualizers
             return meta.TypeName.Contains(_typeName);
         }
 
-        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData descriptor)
+        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
         {
-            var variable = _helper.ReadVariable(ToTypedData(descriptor));
+            var variable = _helper.ReadVariable(meta.Entry);
             var length = variable.Fields["length"].Data.Data;
             var pointer = variable.Fields["data_ptr"];
 
@@ -39,7 +39,7 @@ namespace windbg_debug.WinDbg.Visualizers
 
         protected override VisualizationResult DoHandle(VariableMetaData meta)
         {
-            var variable = _helper.ReadVariable(ToTypedData(meta));
+            var variable = _helper.ReadVariable(meta.Entry);
             var length = variable.Fields["length"].Data.Data;
 
 

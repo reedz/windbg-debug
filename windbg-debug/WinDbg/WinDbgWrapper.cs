@@ -44,6 +44,8 @@ namespace windbg_debug.WinDbg
         [ThreadStatic]
         private OutputCallbacks _output;
 
+        private List<string> _allSymbols = new List<string>();
+
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
         public event BreakpointHitHandler BreakpointHit;
@@ -240,7 +242,7 @@ namespace windbg_debug.WinDbg
             uint matchSize;
             hr = _symbols.StartSymbolMatch("*", out handle);
             var name = new StringBuilder(Defaults.BufferSize);
-            _symbols.GetNextSymbolMatch(handle, name, Defaults.BufferSize, out matchSize, out offset);
+            hr = _symbols.GetNextSymbolMatch(handle, name, Defaults.BufferSize, out matchSize, out offset);
             hr = _symbols.EndSymbolMatch(handle);
             return hr;
         }
@@ -290,6 +292,7 @@ namespace windbg_debug.WinDbg
             Initialize();
 
             // Process initial launch message
+            Thread.Sleep(500);
             ProcessMessages();
 
             // Give VS Code time to set up stuff.
@@ -600,6 +603,7 @@ namespace windbg_debug.WinDbg
             _visualizers.AddVisualizer(new RustWtf8Visualizer(_requestHelper, _symbols, _visualizers));
             _visualizers.AddVisualizer(new RustVectorVisualizer(_requestHelper, _symbols, _visualizers));
             _visualizers.AddVisualizer(new RustSliceVisualizer(_requestHelper, _symbols, _visualizers));
+            _visualizers.AddVisualizer(new RustEnumVisualizer(_requestHelper, _symbols, _visualizers, _output));
 
             _visualizers.SetDefaultVisualizer(new DefaultVisualizer(_requestHelper, _symbols, _visualizers, _output));
         }

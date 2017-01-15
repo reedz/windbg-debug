@@ -54,7 +54,7 @@ namespace windbg_debug.WinDbg.Visualizers
 
         private VisualizationResult ReadStaticString(VariableMetaData meta)
         {
-            var variableRead = _helper.ReadVariable(ToTypedData(meta));
+            var variableRead = _helper.ReadVariable(meta.Entry);
             var stringLength = variableRead.Fields["length"].Data.Data;
             var stringPointer = BitConverter.ToUInt64(_helper.ReadValue(variableRead.Data.Offset, variableRead.Data.Size), 0);
             var actualString = ReadString(stringPointer, (uint)stringLength);
@@ -69,8 +69,7 @@ namespace windbg_debug.WinDbg.Visualizers
 
         private VisualizationResult ReadPointerString(VariableMetaData meta)
         {
-            var variableData = ToTypedData(meta);
-            var dereferenced = _helper.Dereference(variableData);
+            var dereferenced = _helper.Dereference(meta.Entry);
 
             var bigString = ReadString(dereferenced.Offset, (uint)Defaults.MaxStringSize);
             var endIndex = bigString.IndexOf('\0');

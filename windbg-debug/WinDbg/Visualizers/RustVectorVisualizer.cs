@@ -30,7 +30,7 @@ namespace windbg_debug.WinDbg.Visualizers
 
         protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
         {
-            var typedData = ToTypedData(meta);
+            var typedData = meta.Entry;
 
             var arrayField = _helper.GetField(typedData, "buf");
             var arrayLengthField = _helper.GetField(typedData, "len");
@@ -47,7 +47,7 @@ namespace windbg_debug.WinDbg.Visualizers
 
         protected override VisualizationResult DoHandle(VariableMetaData meta)
         {
-            var typedData = ToTypedData(meta);
+            var typedData = meta.Entry;
 
             var arrayField = _helper.GetField(typedData, "buf");
             var arrayLengthField = _helper.GetField(typedData, "len");
