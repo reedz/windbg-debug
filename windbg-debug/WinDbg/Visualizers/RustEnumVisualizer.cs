@@ -11,8 +11,8 @@ namespace windbg_debug.WinDbg.Visualizers
         #region Fields
 
         private static readonly string _enumFieldName = "RUST$ENUM$";
-        private static readonly string _enumEncodedFieldName = "RUST$ENCODED$ENUM";
         private readonly OutputCallbacks _output;
+
         #endregion
 
         #region Constructor
@@ -32,27 +32,14 @@ namespace windbg_debug.WinDbg.Visualizers
         protected override bool DoCanHandle(VariableMetaData meta)
         {
             var fields = _helper.ReadFieldNames(meta.Entry);
-            return fields.Any(x => x.StartsWith(_enumFieldName, StringComparison.OrdinalIgnoreCase)
-                || x.StartsWith(_enumEncodedFieldName, StringComparison.OrdinalIgnoreCase));
+            return fields.Any(x => x.StartsWith(_enumFieldName, StringComparison.OrdinalIgnoreCase));
         }
 
         protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
-            var actualFields = new Dictionary<string, TypedVariable>();
-            int counter = -1;
             int enumValue = GetEnumValue(meta.Entry);
-            foreach (var pair in variable.Fields)
-            {
-                if (pair.Key.StartsWith(_enumFieldName, StringComparison.OrdinalIgnoreCase))
-                {
-                    counter++;
-                    continue;
-                }
-
-                if (counter == enumValue)
-                    actualFields.Add(pair.Key, pair.Value);
-            }
+            Dictionary<string, TypedVariable> actualFields = GetChildFields(variable, enumValue);
 
             var result = new Dictionary<VariableMetaData, VisualizationResult>();
             foreach (var pair in actualFields)
@@ -68,25 +55,37 @@ namespace windbg_debug.WinDbg.Visualizers
         protected override VisualizationResult DoHandle(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
-            string enumName;
-            if (variable.Fields.First().Key.StartsWith(_enumEncodedFieldName, StringComparison.OrdinalIgnoreCase))
-            {
-                var fullName = variable.Fields.First().Key;
-                enumName = fullName.Substring(fullName.LastIndexOf('$') + 1);
-            }
-            else
-            {
-                var names = ReadEnumNames(variable.Fields.First().Value.Data);
-                var enumValue = GetEnumValue(meta.Entry);
-                enumName = names.ContainsKey(enumValue) ? names[enumValue] : Defaults.UnknownValue;
-            }
 
-            return new VisualizationResult($"{meta.TypeName}::{enumName}", true);
+            var names = ReadEnumNames(variable.Fields.First().Value.Data);
+            var enumValue = GetEnumValue(meta.Entry);
+            var enumName = names.ContainsKey(enumValue) ? names[enumValue] : Defaults.UnknownValue;
+            var hasChildren = GetChildFields(variable, enumValue).Count > 0;
+
+            return new VisualizationResult($"{meta.TypeName}::{enumName}", hasChildren);
         }
 
         #endregion
 
-        #region Fields
+        #region Private Methods
+
+        private static Dictionary<string, TypedVariable> GetChildFields(TypedVariable variable, int enumValue)
+        {
+            int counter = -1;
+            var actualFields = new Dictionary<string, TypedVariable>();
+            foreach (var pair in variable.Fields)
+            {
+                if (pair.Key.StartsWith(_enumFieldName, StringComparison.OrdinalIgnoreCase))
+                {
+                    counter++;
+                    continue;
+                }
+
+                if (counter == enumValue)
+                    actualFields.Add(pair.Key, pair.Value);
+            }
+
+            return actualFields;
+        }
 
         private int GetEnumValue(_DEBUG_TYPED_DATA typedData)
         {

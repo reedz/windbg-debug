@@ -604,6 +604,7 @@ namespace windbg_debug.WinDbg
             _visualizers.AddVisualizer(new RustVectorVisualizer(_requestHelper, _symbols, _visualizers));
             _visualizers.AddVisualizer(new RustSliceVisualizer(_requestHelper, _symbols, _visualizers));
             _visualizers.AddVisualizer(new RustEnumVisualizer(_requestHelper, _symbols, _visualizers, _output));
+            _visualizers.AddVisualizer(new RustEncodedEnumVisualizer(_requestHelper, _symbols, _visualizers, _output));
 
             _visualizers.SetDefaultVisualizer(new DefaultVisualizer(_requestHelper, _symbols, _visualizers, _output));
         }
