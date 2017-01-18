@@ -1,7 +1,6 @@
-﻿namespace windbg_debug.WinDbg.Results
+﻿namespace WinDbgDebug.WinDbg.Results
 {
     public class TerminateMessageResult : MessageResult
     {
-
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Diagnostics.Runtime.Interop;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class InputCallbacks : IDebugInputCallbacks
     {

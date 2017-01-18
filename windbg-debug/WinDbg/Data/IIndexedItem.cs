@@ -1,4 +1,4 @@
-﻿namespace windbg_debug.WinDbg.Data
+﻿namespace WinDbgDebug.WinDbg.Data
 {
     public interface IIndexedItem
     {

@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using VSCodeDebug;
-using windbg_debug.WinDbg.Data;
-using windbg_debug.WinDbg.Messages;
-using windbg_debug.WinDbg.Results;
+using WinDbgDebug.WinDbg.Data;
+using WinDbgDebug.WinDbg.Messages;
+using WinDbgDebug.WinDbg.Results;
 using StackFrame = VSCodeDebug.StackFrame;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class WinDbgDebugSession : DebugSession
     {
@@ -22,7 +22,8 @@ namespace windbg_debug.WinDbg
 
         #region Constructor
 
-        public WinDbgDebugSession(InternalLogger logger, bool traceRequests = false, bool traceResponses = false) : base(true, false)
+        public WinDbgDebugSession(InternalLogger logger, bool traceRequests = false, bool traceResponses = false)
+            : base(true, false)
         {
             _logger = logger;
             TRACE = traceRequests;
@@ -103,34 +104,6 @@ namespace windbg_debug.WinDbg
             LogFinish();
         }
 
-        private void InitializeDebugger(dynamic arguments, string debuggerEnginePath)
-        {
-            Action<string> logger = (text) => SendEvent(new OutputEvent("stdout", text));
-            _wrapper = new WinDbgWrapper(
-                debuggerEnginePath,
-                new VSCodeLogger(
-                    DynamicHelpers.To<bool>(arguments.verbose, true),
-                    logger));
-            _wrapper.BreakpointHit += OnBreakpoint;
-            _wrapper.ExceptionHit += OnException;
-            _wrapper.BreakHit += OnBreak;
-        }
-
-        private void OnBreak(int threadId)
-        {
-            SendEvent(new StoppedEvent(threadId, "break"));
-        }
-
-        private void OnException(int exceptionCode, int threadId)
-        {
-            SendEvent(new StoppedEvent(threadId, "exception", $"Error code: {exceptionCode.ToString("X8")}"));
-        }
-
-        private void OnBreakpoint(Breakpoint breakpoint, int threadId)
-        {
-            SendEvent(new StoppedEvent(threadId, "breakpoint"));
-        }
-
         public override void Next(Response response, dynamic arguments)
         {
             _wrapper.HandleMessageWithoutResult(new StepOverMessage());
@@ -149,10 +122,8 @@ namespace windbg_debug.WinDbg
             int frameId = DynamicHelpers.To<int>(arguments.frameId);
 
             var result = _wrapper.HandleMessage<ScopesMessageResult>(new ScopesMessage(frameId), Defaults.Timeout).Result;
-            SendResponse(
-                response, 
-                new ScopesResponseBody(
-                    new List<VSCodeDebug.Scope>(result.Scopes.Select(x => new VSCodeDebug.Scope(x.Name, x.Id)))));
+            var responseBody = new ScopesResponseBody(new List<VSCodeDebug.Scope>(result.Scopes.Select(x => new VSCodeDebug.Scope(x.Name, x.Id))));
+            SendResponse(response, responseBody);
         }
 
         public override void SetBreakpoints(Response response, dynamic arguments)
@@ -172,11 +143,6 @@ namespace windbg_debug.WinDbg
 
             var result = _wrapper.HandleMessage<StackTraceMessageResult>(new StackTraceMessage(threadId), Defaults.Timeout).Result;
             SendResponse(response, new StackTraceResponseBody(result.Frames.Select(ToStackFrame).ToList()));
-        }
-
-        private StackFrame ToStackFrame(StackTraceFrame frame)
-        {
-            return new StackFrame(frame.Id, $"StackFrame#{frame.Order}", new Source(frame.FilePath), frame.Line, 0);
         }
 
         public override void StepIn(Response response, dynamic arguments)
@@ -210,14 +176,44 @@ namespace windbg_debug.WinDbg
             SendResponse(response, new VariablesResponseBody(result.Variables.Select(ToVariable).ToList()));
         }
 
+        #endregion
+
+        #region Private Methods
+
+        private StackFrame ToStackFrame(StackTraceFrame frame)
+        {
+            return new StackFrame(frame.Id, $"StackFrame#{frame.Order}", new Source(frame.FilePath), frame.Line, 0);
+        }
+
         private VSCodeDebug.Variable ToVariable(Data.Variable variable)
         {
             return new VSCodeDebug.Variable(variable.Name, variable.Value, variable.HasChildren ? variable.Id : Defaults.NoChildren);
         }
 
-        #endregion
+        private void InitializeDebugger(dynamic arguments, string debuggerEnginePath)
+        {
+            Action<string> loggerAction = (text) => SendEvent(new OutputEvent("stdout", text));
+            var logger = new VSCodeLogger(DynamicHelpers.To<bool>(arguments.verbose, true), loggerAction);
+            _wrapper = new WinDbgWrapper(debuggerEnginePath, logger);
+            _wrapper.BreakpointHit += OnBreakpoint;
+            _wrapper.ExceptionHit += OnException;
+            _wrapper.BreakHit += OnBreak;
+        }
 
-        #region Private Methods
+        private void OnBreak(int threadId)
+        {
+            SendEvent(new StoppedEvent(threadId, "break"));
+        }
+
+        private void OnException(int exceptionCode, int threadId)
+        {
+            SendEvent(new StoppedEvent(threadId, "exception", $"Error code: {exceptionCode.ToString("X8")}"));
+        }
+
+        private void OnBreakpoint(Breakpoint breakpoint, int threadId)
+        {
+            SendEvent(new StoppedEvent(threadId, "breakpoint"));
+        }
 
         private void LogStart([CallerMemberName] string method = "<Unknown>")
         {

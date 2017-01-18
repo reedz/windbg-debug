@@ -1,12 +1,12 @@
 ﻿using Microsoft.Diagnostics.Runtime.Interop;
 
-namespace windbg_debug.WinDbg.Data
+namespace WinDbgDebug.WinDbg.Data
 {
     public class VariableMetaData
     {
         #region Constructor
 
-        public VariableMetaData (string name, string typeName,_DEBUG_TYPED_DATA entry)
+        public VariableMetaData(string name, string typeName, _DEBUG_TYPED_DATA entry)
         {
             Name = name;
             TypeName = typeName;

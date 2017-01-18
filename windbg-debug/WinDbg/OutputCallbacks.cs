@@ -1,8 +1,8 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Text;
+using Microsoft.Diagnostics.Runtime.Interop;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class OutputCallbacks : IDebugOutputCallbacks2
     {

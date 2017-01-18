@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class Breakpoint
     {

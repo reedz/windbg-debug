@@ -1,8 +1,8 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Microsoft.Diagnostics.Runtime.Interop;
 
-namespace windbg_debug.WinDbg.Data
+namespace WinDbgDebug.WinDbg.Data
 {
     public static class Scopes
     {

@@ -1,10 +1,11 @@
-﻿namespace windbg_debug.WinDbg.Results
+﻿namespace WinDbgDebug.WinDbg.Results
 {
     public class LaunchMessageResult : MessageResult
     {
         #region Constructor
 
-        public LaunchMessageResult():this(null)
+        public LaunchMessageResult()
+            : this(null)
         {
         }
 
@@ -17,7 +18,10 @@
 
         #region Public Properties
 
-        public bool Success {  get { return string.IsNullOrEmpty(Error); } }
+        public bool Success
+        {
+            get { return string.IsNullOrEmpty(Error); }
+        }
         public string Error { get; private set; }
 
         #endregion

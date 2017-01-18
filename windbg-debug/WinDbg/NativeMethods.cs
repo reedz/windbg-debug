@@ -1,10 +1,9 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
-using System.Diagnostics;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.Runtime.Interop;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public static class NativeMethods
     {
@@ -27,15 +26,10 @@ namespace windbg_debug.WinDbg
         {
             const int MAX_PATH = 260;
             StringBuilder builder = new StringBuilder(MAX_PATH);
-            IntPtr hModule = GetModuleHandle(DebuggerEngineLibraryName);  // might return IntPtr.Zero until 
-                                                          // you call a method in  
-                                                          // dll.dll causing it to be 
-                                                          // loaded by LoadLibrary
+            IntPtr hModule = GetModuleHandle(DebuggerEngineLibraryName);
 
-            Debug.Assert(hModule != IntPtr.Zero);
             uint size = GetModuleFileName(hModule, builder, builder.Capacity);
-            Debug.Assert(size > 0);
-            return builder.ToString();   // might need to truncate nulls
+            return builder.ToString();
         }
 
         [DllImport(KernelLibraryName, CharSet = CharSet.Auto)]
@@ -43,12 +37,10 @@ namespace windbg_debug.WinDbg
 
         [DllImport(KernelLibraryName, SetLastError = true)]
         [PreserveSig]
-        public static extern uint GetModuleFileName
-        (
+        public static extern uint GetModuleFileName(
             [In] IntPtr hModule,
             [Out] StringBuilder lpFilename,
-            [In][MarshalAs(UnmanagedType.U4)] int nSize
-        );
+            [In][MarshalAs(UnmanagedType.U4)] int nSize);
 
         #endregion
     }

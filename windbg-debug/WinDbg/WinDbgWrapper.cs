@@ -1,5 +1,4 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -7,12 +6,13 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using windbg_debug.WinDbg.Data;
-using windbg_debug.WinDbg.Messages;
-using windbg_debug.WinDbg.Results;
-using windbg_debug.WinDbg.Visualizers;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
+using WinDbgDebug.WinDbg.Messages;
+using WinDbgDebug.WinDbg.Results;
+using WinDbgDebug.WinDbg.Visualizers;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class WinDbgWrapper : IDisposable
     {
@@ -22,7 +22,16 @@ namespace windbg_debug.WinDbg
         private readonly Dictionary<uint, Breakpoint> _breakpoints = new Dictionary<uint, Breakpoint>();
         private readonly Dictionary<Type, Func<Message, MessageResult>> _handlers = new Dictionary<Type, Func<Message, MessageResult>>();
         private readonly VSCodeLogger _logger;
+        private readonly Thread _debuggerThread;
+        private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
+
         private int _lastBreakpointId = 1;
+        private bool disposedValue = false; // To detect redundant calls
+        private List<string> _allSymbols = new List<string>();
+
+        // not ThreadStatic to allow interrupting
+        private IDebugControl6 _control;
+
         [ThreadStatic]
         private RequestHelper _requestHelper;
         [ThreadStatic]
@@ -33,8 +42,6 @@ namespace windbg_debug.WinDbg
         private EventCallbacks _callbacks;
         [ThreadStatic]
         private IDebugAdvanced3 _advanced;
-        // not ThreadStatic to allow interrupting
-        private IDebugControl6 _control;
         [ThreadStatic]
         private IDebugSystemObjects3 _systemObjects;
         [ThreadStatic]
@@ -43,14 +50,6 @@ namespace windbg_debug.WinDbg
         private VisualizerRegistry _visualizers;
         [ThreadStatic]
         private OutputCallbacks _output;
-
-        private List<string> _allSymbols = new List<string>();
-
-        private readonly Thread _debuggerThread;
-        private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
-        public event BreakpointHitHandler BreakpointHit;
-        public event ExceptionHitHandler ExceptionHit;
-        public event BreakHandler BreakHit;
 
         #endregion
 
@@ -71,6 +70,10 @@ namespace windbg_debug.WinDbg
         }
 
         #endregion
+
+        public event BreakpointHitHandler BreakpointHit;
+        public event ExceptionHitHandler ExceptionHit;
+        public event BreakHandler BreakHit;
 
         #region Public Properties
 
@@ -94,7 +97,8 @@ namespace windbg_debug.WinDbg
         public void HandleMessageWithoutResult(Message message)
         {
             var task = HandleMessage<MessageResult>(message);
-            // TODO: What to do with task ?
+
+            // @TODO: What to do with task ?
         }
 
         public void Interrupt()
@@ -105,6 +109,21 @@ namespace windbg_debug.WinDbg
         #endregion
 
         #region Private Methods
+
+        private static IDebugClient6 CreateDebuggerClient()
+        {
+            IDebugClient result;
+            var errorCode = NativeMethods.DebugCreate(typeof(IDebugClient).GUID, out result);
+            if (errorCode != HResult.Ok)
+                throw new Exception($"Could not create debugger client. HRESULT = '{errorCode}'");
+
+            return (IDebugClient6)result;
+        }
+
+        private static bool IsChild(uint parentSymbolListIndex, DEBUG_SYMBOL_PARAMETERS[] parameters, uint variableIndex)
+        {
+            return parameters[variableIndex].ParentSymbol == parentSymbolListIndex;
+        }
 
         private void OnBreakpoint(object sender, IDebugBreakpoint e)
         {
@@ -158,7 +177,7 @@ namespace windbg_debug.WinDbg
 
             var response = _requestHelper.Evaluate(message.Expression);
             if (response.TypeId == 0)
-               return new EvaluateMessageResult(string.Empty);
+                return new EvaluateMessageResult(string.Empty);
 
             return new EvaluateMessageResult(Encoding.Default.GetString(ReadValue(response)));
         }
@@ -185,7 +204,6 @@ namespace windbg_debug.WinDbg
 
             var desiredFrame = State.GetFrame(frameId);
             if (desiredFrame == null || hr != HResult.Ok)
-                // hope for the best
                 return;
 
             if (actualFrameIndex == desiredFrame.Order)
@@ -276,16 +294,6 @@ namespace windbg_debug.WinDbg
             return MessageResult.Empty;
         }
 
-        private static IDebugClient6 CreateDebuggerClient()
-        {
-            IDebugClient result;
-            var errorCode = NativeMethods.DebugCreate(typeof(IDebugClient).GUID, out result);
-            if (errorCode != HResult.Ok)
-                throw new Exception($"Could not create debugger client. HRESULT = '{errorCode}'");
-
-            return (IDebugClient6)result;
-        }
-
         private void MainLoop(object state)
         {
             var token = (CancellationToken)state;
@@ -351,8 +359,6 @@ namespace windbg_debug.WinDbg
 
         private MessageResult DoStepOut()
         {
-            //@ TODO
-
             return MessageResult.Empty;
         }
 
@@ -378,7 +384,6 @@ namespace windbg_debug.WinDbg
                 return DoGetVariablesByVariableId(parentId);
             else
                 return DoGetVariablesByScope(scope);
-
         }
 
         private VariablesMessageResult DoGetVariablesByVariableId(int variableId)
@@ -444,8 +449,8 @@ namespace windbg_debug.WinDbg
                 if (_visualizers.TryHandle(new VariableMetaData(variableName, typeName, typedData), out handledVariable))
                 {
                     variable = State.AddVariable(
-                        parentId, 
-                        (id) => new Variable(id, variableName, typeName, handledVariable.Value , handledVariable.HasChildren),
+                        parentId,
+                        (id) => new Variable(id, variableName, typeName, handledVariable.Value, handledVariable.HasChildren),
                         typedData);
                 }
                 else
@@ -471,11 +476,6 @@ namespace windbg_debug.WinDbg
             Array.Copy(valueBuffer, valueTrimmed, bytesRead);
 
             return valueTrimmed;
-        }
-
-        private static bool IsChild(uint parentSymbolListIndex, DEBUG_SYMBOL_PARAMETERS[] parameters, uint variableIndex)
-        {
-            return parameters[variableIndex].ParentSymbol == parentSymbolListIndex;
         }
 
         private VariablesMessageResult DoGetVariablesByScope(Scope scope)
@@ -536,7 +536,6 @@ namespace windbg_debug.WinDbg
             uint actualCurrentId;
             var hr = _systemObjects.GetCurrentThreadSystemId(out actualCurrentId);
             if (hr != HResult.Ok)
-                // hope for the best
                 return;
 
             if (actualCurrentId == threadId)
@@ -631,9 +630,10 @@ namespace windbg_debug.WinDbg
         #endregion
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
 
+#pragma warning disable SA1202 // Elements must be ordered by access
         protected virtual void Dispose(bool disposing)
+#pragma warning restore SA1202 // Elements must be ordered by access
         {
             if (!disposedValue)
             {
@@ -644,7 +644,6 @@ namespace windbg_debug.WinDbg
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
                 // TODO: set large fields to null.
-
                 disposedValue = true;
             }
         }
@@ -656,10 +655,13 @@ namespace windbg_debug.WinDbg
         // }
 
         // This code added to correctly implement the disposable pattern.
+#pragma warning disable SA1202 // Elements must be ordered by access
         public void Dispose()
+#pragma warning restore SA1202 // Elements must be ordered by access
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
+
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
         }

@@ -1,16 +1,13 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
+using Microsoft.Diagnostics.Runtime.Interop;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class EventCallbacks : IDebugEventCallbacksWide
     {
         #region Fields
 
-        public event EventHandler<IDebugBreakpoint> BreakpointHit;
         private IDebugControl6 _control;
-        public event EventHandler<EXCEPTION_RECORD64> ExceptionHit;
-        public event EventHandler BreakHappened;
 
         #endregion
 
@@ -20,6 +17,14 @@ namespace windbg_debug.WinDbg
         {
             _control = control;
         }
+
+        #endregion
+
+        #region Public Events
+
+        public event EventHandler<IDebugBreakpoint> BreakpointHit;
+        public event EventHandler<EXCEPTION_RECORD64> ExceptionHit;
+        public event EventHandler BreakHappened;
 
         #endregion
 

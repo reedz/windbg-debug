@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace windbg_debug.WinDbg.Data
+namespace WinDbgDebug.WinDbg.Data
 {
     public class Scope : IIndexedItem
     {

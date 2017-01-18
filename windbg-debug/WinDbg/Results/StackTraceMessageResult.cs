@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using windbg_debug.WinDbg.Data;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Results
+namespace WinDbgDebug.WinDbg.Results
 {
     public class StackTraceMessageResult : MessageResult
     {

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Diagnostics.Runtime.Interop;
-using windbg_debug.WinDbg.Data;
 using System.Linq;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Visualizers
+namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustEnumVisualizer : VisualizerBase
     {
@@ -17,7 +17,8 @@ namespace windbg_debug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustEnumVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry, OutputCallbacks output) : base(helper, symbols, registry)
+        public RustEnumVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry, OutputCallbacks output)
+            : base(helper, symbols, registry)
         {
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
@@ -103,7 +104,7 @@ namespace windbg_debug.WinDbg.Visualizers
             foreach (var line in enumerationTypes)
             {
                 var enumName = line.Substring(0, line.IndexOf('=')).Trim();
-                var enumValue = line.Substring(line.IndexOf('=') + 1).Replace("0n", "").Trim();
+                var enumValue = line.Substring(line.IndexOf('=') + 1).Replace("0n", string.Empty).Trim();
                 result.Add(int.Parse(enumValue), enumName);
             }
 

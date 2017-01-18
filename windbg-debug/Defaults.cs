@@ -1,7 +1,7 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
+using Microsoft.Diagnostics.Runtime.Interop;
 
-namespace windbg_debug
+namespace WinDbgDebug
 {
     public static class Defaults
     {

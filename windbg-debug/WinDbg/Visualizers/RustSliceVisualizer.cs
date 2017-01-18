@@ -1,9 +1,8 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
-using System.Collections.Generic;
-using windbg_debug.WinDbg.Data;
+﻿using System.Collections.Generic;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Visualizers
+namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustSliceVisualizer : VisualizerBase
     {
@@ -15,7 +14,8 @@ namespace windbg_debug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustSliceVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry) : base(helper, symbols, registry)
+        public RustSliceVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry)
+            : base(helper, symbols, registry)
         {
         }
 
@@ -41,7 +41,6 @@ namespace windbg_debug.WinDbg.Visualizers
         {
             var variable = _helper.ReadVariable(meta.Entry);
             var length = variable.Fields["length"].Data.Data;
-
 
             return new VisualizationResult($"{meta.TypeName} [{length}]", length > 0);
         }

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using windbg_debug.WinDbg.Data;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Visualizers
+namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class VisualizerRegistry
     {

@@ -1,11 +1,11 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
-using windbg_debug.WinDbg.Data;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Collections.ObjectModel;
+using System.Text;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Visualizers
+namespace WinDbgDebug.WinDbg.Visualizers
 {
     public abstract class VisualizerBase
     {

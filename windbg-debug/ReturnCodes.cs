@@ -1,4 +1,4 @@
-﻿namespace windbg_debug
+﻿namespace WinDbgDebug
 {
     public enum ReturnCodes
     {

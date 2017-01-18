@@ -1,4 +1,4 @@
-﻿namespace windbg_debug.WinDbg
+﻿namespace WinDbgDebug.WinDbg
 {
     public static class ErrorCodes
     {

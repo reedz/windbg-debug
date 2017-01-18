@@ -1,4 +1,6 @@
-﻿namespace windbg_debug.WinDbg.Messages
+﻿namespace WinDbgDebug.WinDbg.Messages
 {
-    public class TerminateMessage : Message { }
+    public class TerminateMessage : Message
+    {
+    }
 }

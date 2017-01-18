@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace windbg_debug.WinDbg.Messages
+namespace WinDbgDebug.WinDbg.Messages
 {
     public class SetBreakpointsMessage : Message
     {

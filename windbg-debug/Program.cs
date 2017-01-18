@@ -4,11 +4,11 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using VSCodeDebug;
-using windbg_debug.WinDbg;
+using WinDbgDebug.WinDbg;
 
-namespace windbg_debug
+namespace WinDbgDebug
 {
-    class Program
+    internal class Program
     {
         #region Fields
 
@@ -68,7 +68,8 @@ namespace windbg_debug
             TcpListener serverSocket = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
             serverSocket.Start();
 
-            new System.Threading.Thread(() => {
+            new System.Threading.Thread(() =>
+            {
                 while (true)
                 {
                     var clientSocket = serverSocket.AcceptSocket();
@@ -76,7 +77,8 @@ namespace windbg_debug
                     {
                         _logger.Log(">> accepted connection from client");
 
-                        new System.Threading.Thread(() => {
+                        new System.Threading.Thread(() =>
+                        {
                             using (var networkStream = new NetworkStream(clientSocket))
                             {
                                 try

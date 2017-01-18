@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace windbg_debug
+namespace WinDbgDebug
 {
     public static class DynamicHelpers
     {

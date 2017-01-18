@@ -1,7 +1,7 @@
 ﻿using CommandLine;
 using CommandLine.Text;
 
-namespace windbg_debug
+namespace WinDbgDebug
 {
     public class CommandLineOptions
     {
@@ -10,7 +10,7 @@ namespace windbg_debug
         [Option('q', "trace-requests", Required = false, HelpText = "Set to trace requests.")]
         public bool TraceRequests { get; set; }
 
-        [Option('s', "trace-responses", Required  = false, HelpText = "Set to trace responses.")]
+        [Option('s', "trace-responses", Required = false, HelpText = "Set to trace responses.")]
         public bool TraceResponses { get; set; }
 
         [Option('p', "port", Required = false, DefaultValue = -1, HelpText = "Server port.")]
@@ -19,7 +19,7 @@ namespace windbg_debug
         [Option('v', "verbose", Required = false, DefaultValue = true, HelpText = "Print details during execution.")]
         public bool Verbose { get; set; }
 
-        [Option('c', "currentDirectory", Required =false, DefaultValue = "", HelpText = "Set working directory.")]
+        [Option('c', "currentDirectory", Required = false, DefaultValue = "", HelpText = "Set working directory.")]
         public string CurrentDirectory { get; set; }
 
         #endregion

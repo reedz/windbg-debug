@@ -1,12 +1,12 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using windbg_debug.WinDbg.Data;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Visualizers
+namespace WinDbgDebug.WinDbg.Visualizers
 {
-    class RustEncodedEnumVisualizer : VisualizerBase
+    public class RustEncodedEnumVisualizer : VisualizerBase
     {
         #region Fields
 
@@ -17,7 +17,8 @@ namespace windbg_debug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustEncodedEnumVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry, OutputCallbacks output) : base(helper, symbols, registry)
+        public RustEncodedEnumVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry, OutputCallbacks output)
+            : base(helper, symbols, registry)
         {
             if (output == null)
                 throw new ArgumentNullException(nameof(output));

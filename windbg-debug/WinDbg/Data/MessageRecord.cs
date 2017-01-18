@@ -1,8 +1,8 @@
 ﻿using System;
-using windbg_debug.WinDbg.Messages;
-using windbg_debug.WinDbg.Results;
+using WinDbgDebug.WinDbg.Messages;
+using WinDbgDebug.WinDbg.Results;
 
-namespace windbg_debug.WinDbg.Data
+namespace WinDbgDebug.WinDbg.Data
 {
     public class MessageRecord
     {

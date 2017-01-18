@@ -1,16 +1,16 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using windbg_debug.WinDbg.Data;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class RequestHelper
     {
-        #region Fields 
+        #region Fields
 
         [ThreadStatic]
         private readonly IDebugAdvanced3 _advanced;
@@ -33,7 +33,7 @@ namespace windbg_debug.WinDbg
             if (spaces == null)
                 throw new ArgumentNullException(nameof(spaces));
 
-            if (symbols== null)
+            if (symbols == null)
                 throw new ArgumentNullException(nameof(symbols));
 
             _advanced = advanced;
@@ -47,7 +47,7 @@ namespace windbg_debug.WinDbg
 
         public _DEBUG_TYPED_DATA CreateTypedData(ulong modBase, ulong offset, uint typeId)
         {
-            _EXT_TYPED_DATA result = new _EXT_TYPED_DATA();
+            _EXT_TYPED_DATA result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_SET_FROM_TYPE_ID_AND_U64;
             result.Flags = 0; // Virtual Memory
             result.InData = new _DEBUG_TYPED_DATA()
@@ -56,8 +56,9 @@ namespace windbg_debug.WinDbg
                 Offset = offset,
                 TypeId = typeId,
             };
+
             // will be populated
-            result.OutData = new _DEBUG_TYPED_DATA();
+            result.OutData = default(_DEBUG_TYPED_DATA);
             result.Status = 0;
 
             var response = PerformRequest(result, Defaults.NoPayload);
@@ -66,7 +67,7 @@ namespace windbg_debug.WinDbg
 
         public _EXT_TYPED_DATA OutputFullValue(_DEBUG_TYPED_DATA typedData)
         {
-            var result = new _EXT_TYPED_DATA();
+            var result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_OUTPUT_FULL_VALUE;
             result.InData = typedData;
 
@@ -78,7 +79,7 @@ namespace windbg_debug.WinDbg
 
         public _EXT_TYPED_DATA OutputShortValue(_DEBUG_TYPED_DATA typedData)
         {
-            var result = new _EXT_TYPED_DATA();
+            var result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_OUTPUT_SIMPLE_VALUE;
             result.InData = typedData;
 
@@ -90,10 +91,9 @@ namespace windbg_debug.WinDbg
 
         public _DEBUG_TYPED_DATA Evaluate(string toEvaluate)
         {
-            var result = new _EXT_TYPED_DATA();
+            var result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_EVALUATE;
             result.Flags = 0;
-            //result.InData =  // additional type information ...
             result.InStrIndex = (uint)Marshal.SizeOf(result);
 
             return PerformRequest(result, Encoding.Default.GetBytes(toEvaluate)).OutData;
@@ -101,7 +101,7 @@ namespace windbg_debug.WinDbg
 
         public _DEBUG_TYPED_DATA GetArrayItem(_DEBUG_TYPED_DATA pointer, ulong index)
         {
-            var result = new _EXT_TYPED_DATA();
+            var result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_GET_ARRAY_ELEMENT;
             result.InData = pointer;
             result.In64 = index;
@@ -112,12 +112,10 @@ namespace windbg_debug.WinDbg
 
         public _DEBUG_TYPED_DATA Dereference(_DEBUG_TYPED_DATA typedData)
         {
-            var result = new _EXT_TYPED_DATA();
+            var result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_GET_DEREFERENCE;
             result.InData = typedData;
-            // will be populated
             result.Status = 0;
-            // result.OutData = ...
 
             var response = PerformRequest(result, Defaults.NoPayload);
             return response.OutData;
@@ -125,13 +123,11 @@ namespace windbg_debug.WinDbg
 
         public _DEBUG_TYPED_DATA GetField(_DEBUG_TYPED_DATA typedData, string field)
         {
-            var result = new _EXT_TYPED_DATA();
+            var result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_GET_FIELD;
             result.InData = typedData;
             result.InStrIndex = (uint)Marshal.SizeOf(result);
-            // will be populated
             result.Status = 0;
-            // result.OutData = ...
 
             var response = PerformRequest(result, Encoding.Default.GetBytes(field));
             return response.OutData;
@@ -139,12 +135,10 @@ namespace windbg_debug.WinDbg
 
         public _DEBUG_TYPED_DATA OutputTypeDefinition(_DEBUG_TYPED_DATA typedData)
         {
-            var result = new _EXT_TYPED_DATA();
+            var result = default(_EXT_TYPED_DATA);
             result.Operation = _EXT_TDOP.EXT_TDOP_OUTPUT_TYPE_DEFINITION;
             result.InData = typedData;
-            // will be populated
             result.Status = 0;
-            // result.OutData = ...
 
             var response = PerformRequest(result, Defaults.NoPayload);
             return response.OutData;
@@ -178,7 +172,7 @@ namespace windbg_debug.WinDbg
             StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
             uint nameSize;
             uint fieldIndex = 0;
-            var hr = _symbols.GetFieldNameWide(data.ModBase, data.TypeId, fieldIndex, buffer, Defaults.BufferSize, out nameSize); ;
+            var hr = _symbols.GetFieldNameWide(data.ModBase, data.TypeId, fieldIndex, buffer, Defaults.BufferSize, out nameSize);
             while (hr == HResult.Ok)
             {
                 result.Add(buffer.ToString());
@@ -201,7 +195,7 @@ namespace windbg_debug.WinDbg
 
             var dataToOperate = isDereferenced ? dereferenced : data;
             var fieldNames = ReadFieldNames(dataToOperate);
-            var fields = fieldNames.Select(x => new KeyValuePair<string, TypedVariable>(x, ReadVariable(GetField(dataToOperate, x))));//.ToDictionary(x => x.Key, x => x.Value);
+            var fields = fieldNames.Select(x => new KeyValuePair<string, TypedVariable>(x, ReadVariable(GetField(dataToOperate, x))));
             var fieldsMap = new Dictionary<string, TypedVariable>();
             foreach (var pair in fields)
             {
@@ -256,7 +250,7 @@ namespace windbg_debug.WinDbg
 
         private static _EXT_TYPED_DATA FromBytes(byte[] data)
         {
-            _EXT_TYPED_DATA result = new _EXT_TYPED_DATA();
+            _EXT_TYPED_DATA result = default(_EXT_TYPED_DATA);
 
             int size = Marshal.SizeOf(result);
             IntPtr pointer = Marshal.AllocHGlobal(size);

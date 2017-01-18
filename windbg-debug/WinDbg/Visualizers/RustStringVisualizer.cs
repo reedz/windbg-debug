@@ -1,9 +1,9 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using windbg_debug.WinDbg.Data;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Visualizers
+namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustStringVisualizer : VisualizerBase
     {
@@ -17,7 +17,8 @@ namespace windbg_debug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustStringVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry) : base(helper, symbols, registry)
+        public RustStringVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry)
+            : base(helper, symbols, registry)
         {
         }
 
@@ -52,6 +53,11 @@ namespace windbg_debug.WinDbg.Visualizers
 
         #region Private Methods
 
+        private static string Enquote(string actualString)
+        {
+            return $"\"{actualString}\"";
+        }
+
         private VisualizationResult ReadStaticString(VariableMetaData meta)
         {
             var variableRead = _helper.ReadVariable(meta.Entry);
@@ -60,11 +66,6 @@ namespace windbg_debug.WinDbg.Visualizers
             var actualString = ReadString(stringPointer, (uint)stringLength);
 
             return new VisualizationResult(Enquote(actualString), false);
-        }
-
-        private static string Enquote(string actualString)
-        {
-            return $"\"{actualString}\"";
         }
 
         private VisualizationResult ReadPointerString(VariableMetaData meta)

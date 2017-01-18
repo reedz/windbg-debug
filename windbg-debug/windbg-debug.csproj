@@ -7,7 +7,7 @@
     <ProjectGuid>{9D44FB43-46EE-426E-B91E-A65344B00DEE}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>windbg_debug</RootNamespace>
+    <RootNamespace>WinDbgDebug</RootNamespace>
     <AssemblyName>windbg-debug</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -23,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <CodeAnalysisRuleSet>windbg-debug.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,6 +33,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>windbg-debug.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CommandLine, Version=1.9.71.2, Culture=neutral, PublicKeyToken=de6f01bd326f8c32, processorArchitecture=MSIL">
@@ -60,12 +62,9 @@
     <Compile Include="Defaults.cs" />
     <Compile Include="DynamicHelpers.cs" />
     <Compile Include="InternalLogger.cs" />
-    <Compile Include="VsCodeBase\DebugSession.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="VsCodeBase\Protocol.cs" />
     <Compile Include="ReturnCodes.cs" />
-    <Compile Include="VsCodeBase\Utilities.cs" />
     <Compile Include="VSCodeLogger.cs" />
     <Compile Include="WinDbg\Data\BasicType.cs" />
     <Compile Include="WinDbg\Data\Breakpoint.cs" />
@@ -125,6 +124,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="windbg-debug.ruleset" />
+  </ItemGroup>
+  <ItemGroup>
+    <Analyzer Include="..\packages\StyleCop.Analyzers.1.0.0\analyzers\dotnet\cs\Newtonsoft.Json.dll" />
+    <Analyzer Include="..\packages\StyleCop.Analyzers.1.0.0\analyzers\dotnet\cs\StyleCop.Analyzers.CodeFixes.dll" />
+    <Analyzer Include="..\packages\StyleCop.Analyzers.1.0.0\analyzers\dotnet\cs\StyleCop.Analyzers.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VSCodeDebug\VSCodeDebug.csproj">
+      <Project>{334bda32-8134-4bce-8974-cb9e7e3c5abb}</Project>
+      <Name>VSCodeDebug</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

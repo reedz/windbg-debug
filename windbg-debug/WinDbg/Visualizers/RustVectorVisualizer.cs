@@ -1,9 +1,9 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using windbg_debug.WinDbg.Data;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg.Visualizers
+namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustVectorVisualizer : VisualizerBase
     {
@@ -15,7 +15,8 @@ namespace windbg_debug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustVectorVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry) : base(helper, symbols, registry)
+        public RustVectorVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry)
+            : base(helper, symbols, registry)
         {
         }
 

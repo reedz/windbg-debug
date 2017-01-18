@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace windbg_debug.WinDbg.Messages
+namespace WinDbgDebug.WinDbg.Messages
 {
     public class LaunchMessage : Message
     {

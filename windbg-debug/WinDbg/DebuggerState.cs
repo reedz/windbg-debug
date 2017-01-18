@@ -1,11 +1,11 @@
-﻿using Microsoft.Diagnostics.Runtime.Interop;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using windbg_debug.WinDbg.Data;
+using Microsoft.Diagnostics.Runtime.Interop;
+using WinDbgDebug.WinDbg.Data;
 
-namespace windbg_debug.WinDbg
+namespace WinDbgDebug.WinDbg
 {
     public class DebuggerState
     {
@@ -20,99 +20,12 @@ namespace windbg_debug.WinDbg
         private Dictionary<int, HashSet<int>> _children = new Dictionary<int, HashSet<int>>();
         private Dictionary<int, VariableMetaData> _variableDescriptions = new Dictionary<int, VariableMetaData>();
 
-
         #endregion
 
         #region Public Properties
 
         public int CurrentThread { get; internal set; }
         public int CurrentFrame { get; internal set; }
-
-        #endregion
-
-        #region Private Methods
-
-        private List<T> GetChildren<T>(int parentId, Dictionary<int, T> container)
-        {
-            HashSet<int> indices;
-            if (!_children.TryGetValue(parentId, out indices))
-                return new List<T>();
-
-            List<T> result = new List<T>();
-            foreach (var index in indices)
-            {
-                T value;
-                if (container.TryGetValue(index, out value))
-                    result.Add(value);
-            }
-
-            return result;
-        }
-
-        private void AddConnection(int key, int index)
-        {
-            HashSet<int> children;
-            if (!_children.TryGetValue(key, out children))
-            {
-                children = new HashSet<int>();
-                _children[key] = children;
-            }
-
-            children.Add(index);
-        }
-
-        private int GetNewIndex()
-        {
-            return Interlocked.Increment(ref _indexCounter);
-        }
-
-        private bool HasChild(int parentId, int childId)
-        {
-            HashSet<int> children;
-            if (!_children.TryGetValue(parentId, out children))
-                return false;
-
-            return children.Contains(childId);
-        }
-
-        private int GetTopMostParentScope(int childId)
-        {
-            foreach (var item in _children)
-            {
-                if (item.Value.Contains(childId))
-                {
-                    if (_scopes.ContainsKey(item.Key))
-                        return item.Key;
-
-                    return GetTopMostParentScope(item.Key);
-                }
-            }
-
-            return childId;
-        }
-
-        private T GetItem<T>(int itemId, Dictionary<int, T> container)
-        {
-            T result;
-            if (container.TryGetValue(itemId, out result))
-                return result;
-
-            return default(T);
-        }
-
-        private T AddItem<T>(Func<int, T> factory, Dictionary<int, T> container, int parentId)
-        {
-            if (factory == null)
-                throw new ArgumentNullException(nameof(factory));
-
-            var index = GetNewIndex();
-            AddConnection(parentId, index);
-
-            var result = factory(index);
-            container.Add(index, result);
-
-            return result;
-        }
 
         #endregion
 
@@ -240,6 +153,92 @@ namespace windbg_debug.WinDbg
         public VariableMetaData GetVariableDescription(int variableId)
         {
             return GetItem(variableId, _variableDescriptions);
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private List<T> GetChildren<T>(int parentId, Dictionary<int, T> container)
+        {
+            HashSet<int> indices;
+            if (!_children.TryGetValue(parentId, out indices))
+                return new List<T>();
+
+            List<T> result = new List<T>();
+            foreach (var index in indices)
+            {
+                T value;
+                if (container.TryGetValue(index, out value))
+                    result.Add(value);
+            }
+
+            return result;
+        }
+
+        private void AddConnection(int key, int index)
+        {
+            HashSet<int> children;
+            if (!_children.TryGetValue(key, out children))
+            {
+                children = new HashSet<int>();
+                _children[key] = children;
+            }
+
+            children.Add(index);
+        }
+
+        private int GetNewIndex()
+        {
+            return Interlocked.Increment(ref _indexCounter);
+        }
+
+        private bool HasChild(int parentId, int childId)
+        {
+            HashSet<int> children;
+            if (!_children.TryGetValue(parentId, out children))
+                return false;
+
+            return children.Contains(childId);
+        }
+
+        private int GetTopMostParentScope(int childId)
+        {
+            foreach (var item in _children)
+            {
+                if (item.Value.Contains(childId))
+                {
+                    if (_scopes.ContainsKey(item.Key))
+                        return item.Key;
+
+                    return GetTopMostParentScope(item.Key);
+                }
+            }
+
+            return childId;
+        }
+
+        private T GetItem<T>(int itemId, Dictionary<int, T> container)
+        {
+            T result;
+            if (container.TryGetValue(itemId, out result))
+                return result;
+
+            return default(T);
+        }
+
+        private T AddItem<T>(Func<int, T> factory, Dictionary<int, T> container, int parentId)
+        {
+            if (factory == null)
+                throw new ArgumentNullException(nameof(factory));
+
+            var index = GetNewIndex();
+            AddConnection(parentId, index);
+
+            var result = factory(index);
+            container.Add(index, result);
+
+            return result;
         }
 
         #endregion
