@@ -25,6 +25,9 @@ namespace WinDbgDebug.WinDbg
         public event EventHandler<IDebugBreakpoint> BreakpointHit;
         public event EventHandler<EXCEPTION_RECORD64> ExceptionHit;
         public event EventHandler BreakHappened;
+        public event EventHandler<int> ProcessExited;
+        public event EventHandler ThreadStarted;
+        public event EventHandler ThreadFinished;
 
         #endregion
 
@@ -67,6 +70,7 @@ namespace WinDbgDebug.WinDbg
 
         public int CreateThread(ulong Handle, ulong DataOffset, ulong StartOffset)
         {
+            ThreadStarted?.Invoke(this, null);
             return HResult.Ok;
         }
 
@@ -78,11 +82,13 @@ namespace WinDbgDebug.WinDbg
 
         public int ExitProcess(uint ExitCode)
         {
+            ProcessExited?.Invoke(this, (int)ExitCode);
             return HResult.Ok;
         }
 
         public int ExitThread(uint ExitCode)
         {
+            ThreadFinished?.Invoke(this, null);
             return HResult.Ok;
         }
 
@@ -113,6 +119,7 @@ namespace WinDbgDebug.WinDbg
 
         public int SystemError(uint Error, uint Level)
         {
+            ExceptionHit?.Invoke(this, new EXCEPTION_RECORD64 { ExceptionCode = Error });
             return HResult.Ok;
         }
 

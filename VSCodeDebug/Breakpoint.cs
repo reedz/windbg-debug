@@ -17,9 +17,7 @@ namespace VSCodeDebug
             this.line = line;
         }
 
-#pragma warning disable SA1300 // Element must begin with upper-case letter
         public bool verified { get; }
         public int line { get; }
-#pragma warning restore SA1300 // Element must begin with upper-case letter
     }
 }

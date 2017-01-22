@@ -83,6 +83,7 @@
     <Compile Include="WinDbg\EventCallbacks.cs" />
     <Compile Include="WinDbg\HResult.cs" />
     <Compile Include="WinDbg\InputCallbacks.cs" />
+    <Compile Include="WinDbg\Messages\AttachMessage.cs" />
     <Compile Include="WinDbg\Messages\ContinueMessage.cs" />
     <Compile Include="WinDbg\Messages\EvaluateMessage.cs" />
     <Compile Include="WinDbg\Messages\LaunchMessage.cs" />
@@ -100,6 +101,7 @@
     <Compile Include="WinDbg\NativeMethods.cs" />
     <Compile Include="WinDbg\OutputCallbacks.cs" />
     <Compile Include="WinDbg\RequestHelper.cs" />
+    <Compile Include="WinDbg\Results\AttachMessageResult.cs" />
     <Compile Include="WinDbg\Results\EvaluateMessageResult.cs" />
     <Compile Include="WinDbg\Results\LaunchMessageResult.cs" />
     <Compile Include="WinDbg\Results\MessageResult.cs" />

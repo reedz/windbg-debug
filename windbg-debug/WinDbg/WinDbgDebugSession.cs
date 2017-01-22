@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -36,35 +37,68 @@ namespace WinDbgDebug.WinDbg
 
         public override void Attach(Response response, dynamic arguments)
         {
-            throw new NotImplementedException();
+            LogStart();
+
+            string workingDir = arguments.workingDir;
+            if (!string.IsNullOrEmpty(workingDir) && Directory.Exists(workingDir))
+                Environment.CurrentDirectory = workingDir;
+
+            string target = arguments.target;
+            int processId = 0;
+            if (string.IsNullOrWhiteSpace(target) || !int.TryParse(target, out processId) || Process.GetProcessById(processId) == null)
+            {
+                SendErrorResponse(response, ErrorCodes.TargetDoesNotExist, $"Could not attach to '{target}' as it does not exist.");
+            }
+
+            string debuggerEnginePath = arguments.windbgpath;
+            InitializeDebugger(arguments, debuggerEnginePath);
+
+            var result = _wrapper.HandleMessage<AttachMessageResult>(new AttachMessage(processId), Defaults.Timeout).Result;
+
+            if (!result.Success)
+                SendErrorResponse(response, ErrorCodes.FailedToAttach, result.Error);
+            else
+                SendResponse(response);
+
+            LogFinish();
         }
 
         public override void Continue(Response response, dynamic arguments)
         {
+            LogStart();
+
             _wrapper.HandleMessageWithoutResult(new ContinueMessage());
+            SendResponse(response);
+
+            LogFinish();
         }
 
         public override void Disconnect(Response response, dynamic arguments)
         {
-            if (_wrapper != null)
-            {
-                _wrapper.HandleMessageWithoutResult(new TerminateMessage());
-                _wrapper.Interrupt();
-                _wrapper = null;
-            }
+            LogStart();
+
+            StopDebugging();
+            SendResponse(response);
+
+            LogFinish();
         }
 
         public override void Evaluate(Response response, dynamic arguments)
         {
+            LogStart();
+
             string expression = arguments.expression;
 
             var result = _wrapper.HandleMessage<EvaluateMessageResult>(new EvaluateMessage(expression)).Result;
             SendResponse(response, new EvaluateResponseBody(result.Value));
+
+            LogFinish();
         }
 
         public override void Initialize(Response response, dynamic args)
         {
             LogStart();
+
             OperatingSystem os = Environment.OSVersion;
             if (os.Platform != PlatformID.Win32NT)
             {
@@ -74,12 +108,14 @@ namespace WinDbgDebug.WinDbg
 
             SendResponse(response, new Capabilities());
             SendEvent(new InitializedEvent());
+
             LogFinish();
         }
 
         public override void Launch(Response response, dynamic arguments)
         {
             LogStart();
+
             string workingDir = arguments.workingDir;
             if (!string.IsNullOrEmpty(workingDir) && Directory.Exists(workingDir))
                 Environment.CurrentDirectory = workingDir;
@@ -106,24 +142,36 @@ namespace WinDbgDebug.WinDbg
 
         public override void Next(Response response, dynamic arguments)
         {
+            LogStart();
+
             _wrapper.HandleMessageWithoutResult(new StepOverMessage());
             SendResponse(response);
+
+            LogFinish();
         }
 
         public override void Pause(Response response, dynamic arguments)
         {
+            LogStart();
+
             _wrapper.HandleMessageWithoutResult(new PauseMessage());
             _wrapper.Interrupt();
             SendResponse(response);
+
+            LogFinish();
         }
 
         public override void Scopes(Response response, dynamic arguments)
         {
+            LogStart();
+
             int frameId = DynamicHelpers.To<int>(arguments.frameId);
 
             var result = _wrapper.HandleMessage<ScopesMessageResult>(new ScopesMessage(frameId), Defaults.Timeout).Result;
             var responseBody = new ScopesResponseBody(new List<VSCodeDebug.Scope>(result.Scopes.Select(x => new VSCodeDebug.Scope(x.Name, x.Id))));
             SendResponse(response, responseBody);
+
+            LogFinish();
         }
 
         public override void SetBreakpoints(Response response, dynamic arguments)
@@ -133,38 +181,62 @@ namespace WinDbgDebug.WinDbg
             string source = arguments.source.path;
             int[] lines = arguments.lines.ToObject<int[]>();
 
-            _wrapper.HandleMessageWithoutResult(new SetBreakpointsMessage(lines.Select(x => new Breakpoint(source, x))));
+            var result = _wrapper.HandleMessage<SetBreakpointsMessageResult>(new SetBreakpointsMessage(lines.Select(x => new Breakpoint(source, x)))).Result;
+            LogFinish();
+
+            response.SetBody(new SetBreakpointsResponseBody(result.BreakpointsSet.Select(x => new VSCodeDebug.Breakpoint(x.Value, x.Key.Line)).ToList()));
+
+            // May terminate debugger session
+            // SendResponse(response);
             LogFinish();
         }
 
         public override void StackTrace(Response response, dynamic arguments)
         {
+            LogStart();
+
             int threadId = DynamicHelpers.To<int>(arguments.threadId, 0);
 
             var result = _wrapper.HandleMessage<StackTraceMessageResult>(new StackTraceMessage(threadId), Defaults.Timeout).Result;
             SendResponse(response, new StackTraceResponseBody(result.Frames.Select(ToStackFrame).ToList()));
+
+            LogFinish();
         }
 
         public override void StepIn(Response response, dynamic arguments)
         {
+            LogStart();
+
             _wrapper.HandleMessageWithoutResult(new StepIntoMessage());
             SendResponse(response);
+
+            LogFinish();
         }
 
         public override void StepOut(Response response, dynamic arguments)
         {
+            LogStart();
+
             _wrapper.HandleMessageWithoutResult(new StepOutMessage());
             SendResponse(response);
+
+            LogFinish();
         }
 
         public override void Threads(Response response, dynamic arguments)
         {
+            LogStart();
+
             var result = _wrapper.HandleMessage<ThreadsMessageResult>(new ThreadsMessage(), Defaults.Timeout).Result;
             SendResponse(response, new ThreadsResponseBody(result.Threads.Select(x => new Thread(x.Id, x.Name)).ToList()));
+
+            LogFinish();
         }
 
         public override void Variables(Response response, dynamic arguments)
         {
+            LogStart();
+
             int parentId = DynamicHelpers.To<int>(arguments.variablesReference, -1);
             if (parentId == -1)
             {
@@ -174,11 +246,22 @@ namespace WinDbgDebug.WinDbg
 
             var result = _wrapper.HandleMessage<VariablesMessageResult>(new VariablesMessage(parentId), Defaults.Timeout).Result;
             SendResponse(response, new VariablesResponseBody(result.Variables.Select(ToVariable).ToList()));
+
+            LogFinish();
         }
 
         #endregion
 
         #region Private Methods
+
+        private void StopDebugging()
+        {
+            if (_wrapper != null)
+            {
+                _wrapper.HandleMessageWithoutResult(new TerminateMessage());
+                _wrapper.Interrupt();
+            }
+        }
 
         private StackFrame ToStackFrame(StackTraceFrame frame)
         {
@@ -198,6 +281,41 @@ namespace WinDbgDebug.WinDbg
             _wrapper.BreakpointHit += OnBreakpoint;
             _wrapper.ExceptionHit += OnException;
             _wrapper.BreakHit += OnBreak;
+            _wrapper.Terminated += OnTerminated;
+            _wrapper.ProcessExited += OnProcessExited;
+            _wrapper.ThreadFinished += OnThreadFinished;
+            _wrapper.ThreadStarted += OnThreadStarted;
+        }
+
+        private void OnThreadStarted(object sender, int threadId)
+        {
+            SendEvent(new ThreadEvent("started", threadId));
+        }
+
+        private void OnThreadFinished(object sender, int threadId)
+        {
+            SendEvent(new ThreadEvent("exited", threadId));
+        }
+
+        private void OnProcessExited(object sender, EventArgs e)
+        {
+            StopDebugging();
+        }
+
+        private void OnTerminated(object sender, EventArgs e)
+        {
+            _wrapper.BreakHit -= OnBreak;
+            _wrapper.BreakpointHit -= OnBreakpoint;
+            _wrapper.ExceptionHit -= OnException;
+            _wrapper.ProcessExited -= OnProcessExited;
+            _wrapper.Terminated -= OnTerminated;
+            _wrapper.ThreadFinished -= OnThreadFinished;
+            _wrapper.ThreadStarted -= OnThreadStarted;
+            _wrapper.Dispose();
+
+            _wrapper = null;
+
+            SendEvent(new TerminatedEvent());
         }
 
         private void OnBreak(int threadId)

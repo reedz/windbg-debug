@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +16,7 @@ using WinDbgDebug.WinDbg.Visualizers;
 
 namespace WinDbgDebug.WinDbg
 {
-    public class WinDbgWrapper : IDisposable
+    public sealed class WinDbgWrapper : IDisposable
     {
         #region Fields
 
@@ -24,31 +26,22 @@ namespace WinDbgDebug.WinDbg
         private readonly VSCodeLogger _logger;
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
+        private readonly object _messagesLock = new object();
 
         private int _lastBreakpointId = 1;
-        private bool disposedValue = false; // To detect redundant calls
+        private bool _isDisposed;
+        private bool _notAcceptingMessages;
         private List<string> _allSymbols = new List<string>();
 
-        // not ThreadStatic to allow interrupting
         private IDebugControl6 _control;
-
-        [ThreadStatic]
         private RequestHelper _requestHelper;
-        [ThreadStatic]
         private IDebugClient6 _debugger;
-        [ThreadStatic]
         private IDebugSymbols5 _symbols;
-        [ThreadStatic]
         private EventCallbacks _callbacks;
-        [ThreadStatic]
         private IDebugAdvanced3 _advanced;
-        [ThreadStatic]
         private IDebugSystemObjects3 _systemObjects;
-        [ThreadStatic]
         private IDebugDataSpaces4 _spaces;
-        [ThreadStatic]
         private VisualizerRegistry _visualizers;
-        [ThreadStatic]
         private OutputCallbacks _output;
 
         #endregion
@@ -69,11 +62,24 @@ namespace WinDbgDebug.WinDbg
             State = new DebuggerState();
         }
 
+        ~WinDbgWrapper()
+        {
+            Dispose(false);
+        }
+
         #endregion
+
+        #region Public Events
 
         public event BreakpointHitHandler BreakpointHit;
         public event ExceptionHitHandler ExceptionHit;
         public event BreakHandler BreakHit;
+        public event EventHandler Terminated;
+        public event EventHandler<int> ThreadStarted;
+        public event EventHandler<int> ThreadFinished;
+        public event EventHandler ProcessExited;
+
+        #endregion
 
         #region Public Properties
 
@@ -86,12 +92,21 @@ namespace WinDbgDebug.WinDbg
         public Task<TResult> HandleMessage<TResult>(Message message, TimeSpan timeout = default(TimeSpan))
             where TResult : MessageResult
         {
-            timeout = timeout == default(TimeSpan) ? Defaults.Timeout : timeout;
-            TaskCompletionSource<TResult> taskSource = new TaskCompletionSource<TResult>();
-            var messageRecord = new MessageRecord(message, (result) => taskSource.SetResult(result as TResult));
-            _messages.Add(messageRecord);
+            lock (_messagesLock)
+            {
+                if (_isDisposed || _notAcceptingMessages)
+                    return Task.FromResult(default(TResult));
 
-            return taskSource.Task;
+                if (message is TerminateMessage)
+                    _notAcceptingMessages = true;
+
+                timeout = timeout == default(TimeSpan) ? Defaults.Timeout : timeout;
+                TaskCompletionSource<TResult> taskSource = new TaskCompletionSource<TResult>();
+                var messageRecord = new MessageRecord(message, (result) => taskSource.SetResult(result as TResult));
+                _messages.Add(messageRecord);
+
+                return taskSource.Task;
+            }
         }
 
         public void HandleMessageWithoutResult(Message message)
@@ -104,6 +119,12 @@ namespace WinDbgDebug.WinDbg
         public void Interrupt()
         {
             _control.SetInterrupt(DEBUG_INTERRUPT.EXIT);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         #endregion
@@ -158,12 +179,50 @@ namespace WinDbgDebug.WinDbg
             _handlers.Add(typeof(EvaluateMessage), (message) => DoEvaluate((EvaluateMessage)message));
             _handlers.Add(typeof(ThreadsMessage), (message) => DoGetThreads());
             _handlers.Add(typeof(ScopesMessage), (message) => DoGetScopes((ScopesMessage)message));
+            _handlers.Add(typeof(AttachMessage), (message) => DoAttach((AttachMessage)message));
+        }
+
+        private MessageResult DoAttach(AttachMessage message)
+        {
+            int hr = _debugger.AttachProcess(
+                Defaults.NoServer,
+                (uint)message.ProcessId,
+                DEBUG_ATTACH.DEFAULT);
+
+            if (hr != HResult.Ok)
+                return new AttachMessageResult($"Error attaching to process: {hr.ToString("X8")}");
+
+            hr = _control.WaitForEvent(DEBUG_WAIT.DEFAULT, uint.MaxValue);
+            if (hr != HResult.Ok)
+                return new AttachMessageResult($"Error attaching debugger: {hr.ToString("X8")}");
+
+            var process = Process.GetProcessById(message.ProcessId);
+            if (process == null)
+                return new AttachMessageResult($"Error reading process info.");
+
+            hr = ForceLoadSymbols(process.StartInfo.FileName);
+            if (hr != HResult.Ok)
+                return new AttachMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
+
+            SetDebugSettings();
+
+            return new AttachMessageResult();
+        }
+
+        private int SetDebugSettings()
+        {
+            // To make sure source stepping works one line at a time.
+            int hr = _control.SetCodeLevel(DEBUG_LEVEL.SOURCE);
+
+            // Evaluate expressions c++ style.
+            hr = _control.SetExpressionSyntax(DEBUG_EXPR.CPLUSPLUS);
+            return hr;
         }
 
         private MessageResult DoEndSession()
         {
             _cancel.Cancel();
-
+            Terminated?.Invoke(this, null);
             return MessageResult.Empty;
         }
 
@@ -242,18 +301,15 @@ namespace WinDbgDebug.WinDbg
             if (hr != HResult.Ok)
                 return new LaunchMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
 
-            // To make sure source stepping works one line at a time.
-            hr = _control.SetCodeLevel(DEBUG_LEVEL.SOURCE);
-
-            // Evaluate expressions c++ style.
-            hr = _control.SetExpressionSyntax(DEBUG_EXPR.CPLUSPLUS);
+            SetDebugSettings();
 
             return new LaunchMessageResult();
         }
 
         private int ForceLoadSymbols(string fullPath)
         {
-            int hr = _symbols.SetSymbolPathWide(Path.GetDirectoryName(fullPath));
+            int hr = HResult.Ok;
+            hr = _symbols.SetSymbolPathWide(Path.GetDirectoryName(fullPath));
             hr = _symbols.SetSourcePathWide(Environment.CurrentDirectory);
             hr = _symbols.Reload(Path.GetFileNameWithoutExtension(fullPath));
             ulong handle, offset;
@@ -267,31 +323,44 @@ namespace WinDbgDebug.WinDbg
 
         private MessageResult DoSetBreakpoints(SetBreakpointsMessage message)
         {
+            var messageResult = new Dictionary<Breakpoint, bool>();
             foreach (var breakpoint in message.Breakpoints)
             {
                 var id = (uint)Interlocked.Increment(ref _lastBreakpointId);
                 IDebugBreakpoint2 breakpointToSet;
                 var result = _control.AddBreakpoint2(DEBUG_BREAKPOINT_TYPE.CODE, id, out breakpointToSet);
                 if (result != HResult.Ok)
-                    throw new Exception("!");
+                {
+                    messageResult.Add(breakpoint, false);
+                    continue;
+                }
 
                 ulong offset;
                 result = _symbols.GetOffsetByLineWide((uint)breakpoint.Line, breakpoint.File, out offset);
                 if (result != HResult.Ok)
-                    throw new Exception("!");
+                {
+                    messageResult.Add(breakpoint, false);
+                    continue;
+                }
 
-                ulong[] buffer = new ulong[8000];
-                uint fileLines;
-                _symbols.GetSourceFileLineOffsetsWide(breakpoint.File, buffer, 8000, out fileLines);
-
-                // TODO: Add hresult handling
                 result = breakpointToSet.SetOffset(offset);
+                if (result != HResult.Ok)
+                {
+                    messageResult.Add(breakpoint, false);
+                    continue;
+                }
                 result = breakpointToSet.SetFlags(DEBUG_BREAKPOINT_FLAG.ENABLED | DEBUG_BREAKPOINT_FLAG.GO_ONLY);
+                if (result != HResult.Ok)
+                {
+                    messageResult.Add(breakpoint, false);
+                    continue;
+                }
 
+                messageResult.Add(breakpoint, true);
                 _breakpoints.Add(id, breakpoint);
             }
 
-            return MessageResult.Empty;
+            return new SetBreakpointsMessageResult(messageResult);
         }
 
         private void MainLoop(object state)
@@ -303,9 +372,15 @@ namespace WinDbgDebug.WinDbg
             Thread.Sleep(500);
             ProcessMessages();
 
+            if (token.IsCancellationRequested)
+                return;
+
             // Give VS Code time to set up stuff.
             Thread.Sleep(2000);
             ProcessMessages();
+
+            if (token.IsCancellationRequested)
+                return;
 
             int hr;
             hr = DoContinueExecution();
@@ -341,7 +416,7 @@ namespace WinDbgDebug.WinDbg
 
         private void ProcessMessages()
         {
-            while (_messages.Count > 0)
+            while (!_isDisposed && _messages.Count > 0)
             {
                 var message = _messages.Take();
                 Func<Message, MessageResult> handler;
@@ -566,7 +641,7 @@ namespace WinDbgDebug.WinDbg
                 return new ThreadsMessageResult(Enumerable.Empty<DebuggeeThread>());
 
             var threads = systemIds.Select(x => new DebuggeeThread((int)x, null));
-            State.AddThreads(threads);
+            State.SetThreads(threads);
 
             return new ThreadsMessageResult(threads);
         }
@@ -587,6 +662,9 @@ namespace WinDbgDebug.WinDbg
             _callbacks.BreakpointHit += OnBreakpoint;
             _callbacks.ExceptionHit += OnException;
             _callbacks.BreakHappened += OnBreak;
+            _callbacks.ThreadStarted += OnThreadStarted;
+            _callbacks.ThreadFinished += OnThreadFinished;
+            _callbacks.ProcessExited += OnProcessExited;
 
             _debugger.SetEventCallbacksWide(_callbacks);
             _debugger.SetOutputCallbacksWide(_output);
@@ -620,6 +698,31 @@ namespace WinDbgDebug.WinDbg
             ExceptionHit?.Invoke((int)e.ExceptionCode, threadId);
         }
 
+        private void OnProcessExited(object sender, int exitCode)
+        {
+            ProcessExited?.Invoke(this, null);
+        }
+
+        private void OnThreadFinished(object sender, EventArgs e)
+        {
+            var threads = DoGetThreads().Threads;
+            var previousThreads = State.GetThreads();
+
+            var deadThreads = previousThreads.Except(threads).ToArray();
+            foreach (var thread in deadThreads)
+                ThreadFinished?.Invoke(this, thread.Id);
+        }
+
+        private void OnThreadStarted(object sender, EventArgs e)
+        {
+            var threads = DoGetThreads().Threads;
+            var previousThreads = State.GetThreads();
+
+            var newThreads = threads.Except(previousThreads).ToArray();
+            foreach (var thread in newThreads)
+                ThreadStarted?.Invoke(this, thread.Id);
+        }
+
         private int GetCurrentThread()
         {
             uint threadId;
@@ -627,44 +730,47 @@ namespace WinDbgDebug.WinDbg
             return (int)threadId;
         }
 
-        #endregion
-
-        #region IDisposable Support
-
-#pragma warning disable SA1202 // Elements must be ordered by access
-        protected virtual void Dispose(bool disposing)
-#pragma warning restore SA1202 // Elements must be ordered by access
+        private void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_isDisposed)
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects).
+                    _cancel.Cancel();
+
+                    _debuggerThread.Join(TimeSpan.FromMilliseconds(100));
+                    _callbacks.BreakpointHit -= OnBreakpoint;
+                    _callbacks.ExceptionHit -= OnException;
+                    _callbacks.BreakHappened -= OnBreak;
+                    _callbacks.ThreadFinished -= OnThreadFinished;
+                    _callbacks.ThreadStarted -= OnThreadStarted;
+                    _callbacks.ProcessExited -= OnProcessExited;
+
+                    _debugger.SetEventCallbacksWide(null);
+                    _debugger.SetOutputCallbacksWide(null);
+                    _debugger.SetInputCallbacks(null);
+
+                    _callbacks = null;
+
+                    _messages.Dispose();
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-                disposedValue = true;
+                while (Marshal.ReleaseComObject(_debugger) > 0)
+                {
+                }
+
+                _debugger = null;
+                _control = null;
+                _symbols = null;
+                _spaces = null;
+                _systemObjects = null;
+                _advanced = null;
+                _requestHelper = null;
+
+                _isDisposed = true;
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~WinDbgWrapper() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
-#pragma warning disable SA1202 // Elements must be ordered by access
-        public void Dispose()
-#pragma warning restore SA1202 // Elements must be ordered by access
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
-        }
         #endregion
     }
 }

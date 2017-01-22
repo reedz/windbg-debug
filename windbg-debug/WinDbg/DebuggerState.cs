@@ -69,11 +69,12 @@ namespace WinDbgDebug.WinDbg
             _indexCounter = Defaults.FirstIndex;
         }
 
-        public void AddThreads(IEnumerable<DebuggeeThread> threads)
+        public void SetThreads(IEnumerable<DebuggeeThread> threads)
         {
             if (threads == null)
                 return;
 
+            _threads.Clear();
             foreach (var item in threads)
             {
                 _threads[item.Id] = item;
