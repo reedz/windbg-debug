@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug"
+            ,"type": "windbg"
+            ,"request": "launch"
+            ,"target": "./target/debug/debugger_test.exe"
+            ,"verbose": true
+            ,"windbgpath": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
+            ,"workingDir": "${workspaceRoot}"
+            
+        }
+    ]
+}
