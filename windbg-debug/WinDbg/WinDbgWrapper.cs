@@ -35,6 +35,7 @@ namespace WinDbgDebug.WinDbg
 
         private IDebugControl6 _control;
         private RequestHelper _requestHelper;
+        private CommandExecutor _commandExecutor;
         private IDebugClient6 _debugger;
         private IDebugSymbols5 _symbols;
         private EventCallbacks _callbacks;
@@ -434,6 +435,8 @@ namespace WinDbgDebug.WinDbg
 
         private MessageResult DoStepOut()
         {
+            _commandExecutor.StepOut();
+
             return MessageResult.Empty;
         }
 
@@ -654,7 +657,9 @@ namespace WinDbgDebug.WinDbg
             _systemObjects = _debugger as IDebugSystemObjects3;
             _advanced = _debugger as IDebugAdvanced3;
             _spaces = _debugger as IDebugDataSpaces4;
+
             _requestHelper = new RequestHelper(_advanced, _spaces, _symbols);
+            _commandExecutor = new CommandExecutor(_control);
             _visualizers = new VisualizerRegistry();
             _output = new OutputCallbacks(_logger);
 
