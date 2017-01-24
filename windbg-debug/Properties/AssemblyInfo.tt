@@ -1,4 +1,20 @@
-﻿using System.Reflection;
+﻿<#@ template hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+	var lines = File.ReadAllLines(Host.ResolvePath("..\\..\\package.json"));
+	var versionInfoLine = lines.FirstOrDefault(x => x.Contains("\"version\":"));
+	var versionInfoPair = versionInfoLine.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+	var versionText = versionInfoPair[1].Trim();
+	var startQuote = versionText.IndexOf('"');
+	var endQuote = versionText.LastIndexOf('"') + 1; // add quote at the ends
+	var versionValue = versionText.Substring(startQuote, endQuote - startQuote);
+#>
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following
@@ -27,5 +43,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.1.0")]
-[assembly: AssemblyFileVersion("0.1.0")]
+[assembly: AssemblyVersion(<#= versionValue #>)]
+[assembly: AssemblyFileVersion(<#= versionValue #>)]
