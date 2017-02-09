@@ -17,7 +17,20 @@ Task("Install-Rust")
     })
     .OnError(ex => Information(ex.ToString()));
 
+Task("Restore-Packages")
+    .Does(() => 
+    {
+        var solutions = GetFiles("../**/*.sln");
+        // Restore all NuGet packages.
+        foreach(var solution in solutions)
+        {
+            Information("Restoring {0}", solution);
+            NuGetRestore(solution);
+        }
+    });
+
 Task("Build-Debugger")
+    .IsDependentOn("Restore-Packages")
     .Does(() => 
     {
         MSBuild("../windbg-debug.sln");
