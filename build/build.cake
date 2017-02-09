@@ -35,7 +35,6 @@ Task("Build-Debugger")
     {
         MSBuild("../windbg-debug.sln", new MSBuildSettings {
             Configuration = "Release",
-            MSBuildPlatform = MSBuildPlatform.AnyCPU,   
         });
     });
 
