@@ -33,7 +33,10 @@ Task("Build-Debugger")
     .IsDependentOn("Restore-Packages")
     .Does(() => 
     {
-        MSBuild("../windbg-debug.sln");
+        MSBuild("../windbg-debug.sln", new MSBuildSettings {
+            Configuration = "Release",
+            MSBuildPlatform = MSBuildPlatform.AnyCPU,   
+        });
     });
 
 Task("Build-Cpp-Debuggee")

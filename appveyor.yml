@@ -3,8 +3,6 @@ branches:
   only:
   - master
 image: Visual Studio 2015
-platform: Any CPU
-configuration: Debug
 
 build_script:
 - ps: ./build/build.ps1 -target Build
