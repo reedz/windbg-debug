@@ -10,7 +10,7 @@ Task("Install-Rust")
         var client = new System.Net.WebClient();
         var installerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup.exe");
         client.DownloadFile("https://win.rustup.rs/", installerPath);
-        using (var process = StartAndReturnProcess(installerPath, new ProcessSettings { Arguments = "-y" }))
+        using (var process = StartAndReturnProcess(installerPath, new ProcessSettings { Arguments = "default stable-msvc -y" }))
         {
             process.WaitForExit();
         }
