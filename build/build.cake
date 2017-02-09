@@ -39,7 +39,11 @@ Task("Build-Debugger")
 Task("Build-Cpp-Debuggee")
     .Does(() =>
     {
-        MSBuild("../windbg-debug-tests/test-debuggees/cpp/src/CppDebuggee.sln");
+        MSBuild("../windbg-debug-tests/test-debuggees/cpp/src/CppDebuggee.sln",
+        new MSBuildSettings {
+            Configuration = "Debug",
+            MSBuildPlatform = MSBuildPlatform.x64,   
+        });
     });
 
 Task("Build-Rust-Debuggee")
