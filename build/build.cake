@@ -1,4 +1,5 @@
 var target = Argument("target", "Build");
+var rustInstallerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup.exe");
 
 Task("Install-Rust")
     .Does(() => 
@@ -8,9 +9,8 @@ Task("Install-Rust")
             | System.Net.SecurityProtocolType.Ssl3  
             | System.Net.SecurityProtocolType.Tls12;
         var client = new System.Net.WebClient();
-        var installerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup.exe");
-        client.DownloadFile("https://win.rustup.rs/", installerPath);
-        using (var process = StartAndReturnProcess(installerPath, new ProcessSettings { Arguments = "default stable-msvc -y" }))
+        client.DownloadFile("https://win.rustup.rs/", rustInstallerPath);
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "default stable-msvc" }))
         {
             process.WaitForExit();
         }
@@ -53,8 +53,8 @@ Task("Build-Rust-Debuggee")
     .Does(() =>
     {
         using (var process = StartAndReturnProcess(
-            "cargo", 
-            new ProcessSettings { Arguments = "build", WorkingDirectory = "../windbg-debug-tests/test-debuggees/rust/" }))
+            rustInstallerPath, 
+            new ProcessSettings { Arguments = "run stable-msvc cargo build", WorkingDirectory = "../windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
