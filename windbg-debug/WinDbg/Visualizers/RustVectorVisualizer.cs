@@ -36,9 +36,9 @@ namespace WinDbgDebug.WinDbg.Visualizers
             var arrayField = _helper.GetField(typedData, "buf");
             var arrayLengthField = _helper.GetField(typedData, "len");
 
-            var actualLength = BitConverter.ToUInt64(_helper.ReadValue(arrayLengthField.Offset, arrayLengthField.Size), 0);
+            var actualLength = _helper.ReadLong(arrayLengthField);
             var result = new Dictionary<VariableMetaData, VisualizationResult>();
-            for (ulong i = 0; i < actualLength; i++)
+            for (long i = 0; i < actualLength; i++)
             {
                 // ...
             }
@@ -52,8 +52,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             var arrayField = _helper.GetField(typedData, "buf");
             var arrayLengthField = _helper.GetField(typedData, "len");
+            long actualLength = _helper.ReadLong(arrayLengthField);
 
-            var actualLength = BitConverter.ToInt64(_helper.ReadValue(arrayLengthField.Offset, arrayLengthField.Size), 0);
             var value = $"Vec{meta.TypeName.Substring(_vectorTypeName.Length)} [{actualLength}]";
 
             return new VisualizationResult(value, actualLength > 0);

@@ -13,7 +13,6 @@
 	"engines": {
 		"vscode": "^1.8.0"
 	},
-	//"icon": "images/mock-debug-icon.svg",
 	"categories": [
 		"Debuggers"
 	],
@@ -29,7 +28,6 @@
 	},
 	"devDependencies": {
 		"typescript": "^2.0.10",
-		//"mocha": "^3.1.2",
 		"vscode": "^1.0.3",
 		"vscode-debugadapter-testsupport": "^1.15.0"
 	},

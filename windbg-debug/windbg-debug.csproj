@@ -83,6 +83,7 @@
     <Compile Include="WinDbg\Data\TypedVariable.cs" />
     <Compile Include="WinDbg\Data\Variable.cs" />
     <Compile Include="WinDbg\Data\VariableDescription.cs" />
+    <Compile Include="WinDbg\DebuggerApi.cs" />
     <Compile Include="WinDbg\DebuggerState.cs" />
     <Compile Include="WinDbg\ErrorCodes.cs" />
     <Compile Include="WinDbg\EventCallbacks.cs" />

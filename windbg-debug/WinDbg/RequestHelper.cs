@@ -166,6 +166,24 @@ namespace WinDbgDebug.WinDbg
             return buffer.ToString();
         }
 
+        public long ReadLong(_DEBUG_TYPED_DATA field)
+        {
+            switch (field.Size)
+            {
+                case 2:
+                    return BitConverter.ToInt16(ReadValue(field.Offset, field.Size), 0);
+
+                case 4:
+                    return BitConverter.ToInt32(ReadValue(field.Offset, field.Size), 0);
+
+                case 8:
+                    return BitConverter.ToInt64(ReadValue(field.Offset, field.Size), 0);
+
+                default:
+                    throw new ArgumentException($"Vector size field has unsupported length '{field.Size}'");
+            }
+        }
+
         public string[] ReadFieldNames(_DEBUG_TYPED_DATA data)
         {
             List<string> result = new List<string>();

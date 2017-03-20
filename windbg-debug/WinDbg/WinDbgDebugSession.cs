@@ -18,6 +18,7 @@ namespace WinDbgDebug.WinDbg
 
         private readonly InternalLogger _logger;
         private WinDbgWrapper _wrapper;
+        private DebuggerApi _api;
 
         #endregion
 
@@ -53,10 +54,10 @@ namespace WinDbgDebug.WinDbg
             string debuggerEnginePath = arguments.windbgpath;
             InitializeDebugger(arguments, debuggerEnginePath);
 
-            var result = _wrapper.HandleMessage<AttachMessageResult>(new AttachMessage(processId), Defaults.Timeout).Result;
+            var result = _api.Attach(processId);
 
-            if (!result.Success)
-                SendErrorResponse(response, ErrorCodes.FailedToAttach, result.Error);
+            if (!string.IsNullOrEmpty(result))
+                SendErrorResponse(response, ErrorCodes.FailedToAttach, result);
             else
                 SendResponse(response);
 
@@ -67,7 +68,7 @@ namespace WinDbgDebug.WinDbg
         {
             LogStart();
 
-            _wrapper.HandleMessageWithoutResult(new ContinueMessage());
+            _api.Continue();
             SendResponse(response);
 
             LogFinish();
@@ -89,8 +90,8 @@ namespace WinDbgDebug.WinDbg
 
             string expression = arguments.expression;
 
-            var result = _wrapper.HandleMessage<EvaluateMessageResult>(new EvaluateMessage(expression)).Result;
-            SendResponse(response, new EvaluateResponseBody(result.Value));
+            var result = _api.Evaluate(expression);
+            SendResponse(response, new EvaluateResponseBody(result));
 
             LogFinish();
         }
@@ -130,10 +131,10 @@ namespace WinDbgDebug.WinDbg
             string debuggerEnginePath = arguments.windbgpath;
             InitializeDebugger(arguments, debuggerEnginePath);
 
-            var result = _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(target, args), Defaults.Timeout).Result;
+            var result = _api.Launch(target, args);
 
-            if (!result.Success)
-                SendErrorResponse(response, ErrorCodes.FailedToLaunch, result.Error);
+            if (!string.IsNullOrEmpty(result))
+                SendErrorResponse(response, ErrorCodes.FailedToLaunch, result);
             else
                 SendResponse(response);
 
@@ -144,7 +145,7 @@ namespace WinDbgDebug.WinDbg
         {
             LogStart();
 
-            _wrapper.HandleMessageWithoutResult(new StepOverMessage());
+            _api.StepOver();
             SendResponse(response);
 
             LogFinish();
@@ -154,8 +155,7 @@ namespace WinDbgDebug.WinDbg
         {
             LogStart();
 
-            _wrapper.HandleMessageWithoutResult(new PauseMessage());
-            _wrapper.Interrupt();
+            _api.Pause();
             SendResponse(response);
 
             LogFinish();
@@ -167,8 +167,8 @@ namespace WinDbgDebug.WinDbg
 
             int frameId = DynamicHelpers.To<int>(arguments.frameId);
 
-            var result = _wrapper.HandleMessage<ScopesMessageResult>(new ScopesMessage(frameId), Defaults.Timeout).Result;
-            var responseBody = new ScopesResponseBody(new List<VSCodeDebug.Scope>(result.Scopes.Select(x => new VSCodeDebug.Scope(x.Name, x.Id))));
+            var result = _api.GetCurrentScopes(frameId);
+            var responseBody = new ScopesResponseBody(new List<VSCodeDebug.Scope>(result.Select(x => new VSCodeDebug.Scope(x.Name, x.Id))));
             SendResponse(response, responseBody);
 
             LogFinish();
@@ -181,10 +181,10 @@ namespace WinDbgDebug.WinDbg
             string source = arguments.source.path;
             int[] lines = arguments.lines.ToObject<int[]>();
 
-            var result = _wrapper.HandleMessage<SetBreakpointsMessageResult>(new SetBreakpointsMessage(lines.Select(x => new Breakpoint(source, x)))).Result;
+            var result = _api.SetBreakpoints(lines.Select(x => new Breakpoint(source, x)));
             LogFinish();
 
-            response.SetBody(new SetBreakpointsResponseBody(result.BreakpointsSet.Select(x => new VSCodeDebug.Breakpoint(x.Value, x.Key.Line)).ToList()));
+            response.SetBody(new SetBreakpointsResponseBody(result.Select(x => new VSCodeDebug.Breakpoint(x.Value, x.Key.Line)).ToList()));
 
             // May terminate debugger session
             // SendResponse(response);
@@ -197,8 +197,8 @@ namespace WinDbgDebug.WinDbg
 
             int threadId = DynamicHelpers.To<int>(arguments.threadId, 0);
 
-            var result = _wrapper.HandleMessage<StackTraceMessageResult>(new StackTraceMessage(threadId), Defaults.Timeout).Result;
-            SendResponse(response, new StackTraceResponseBody(result.Frames.Select(ToStackFrame).ToList()));
+            var result = _api.GetCurrentStackTrace(threadId);
+            SendResponse(response, new StackTraceResponseBody(result.Select(ToStackFrame).ToList()));
 
             LogFinish();
         }
@@ -207,7 +207,7 @@ namespace WinDbgDebug.WinDbg
         {
             LogStart();
 
-            _wrapper.HandleMessageWithoutResult(new StepIntoMessage());
+            _api.StepInto();
             SendResponse(response);
 
             LogFinish();
@@ -217,7 +217,7 @@ namespace WinDbgDebug.WinDbg
         {
             LogStart();
 
-            _wrapper.HandleMessageWithoutResult(new StepOutMessage());
+            _api.StepOut();
             SendResponse(response);
 
             LogFinish();
@@ -227,8 +227,8 @@ namespace WinDbgDebug.WinDbg
         {
             LogStart();
 
-            var result = _wrapper.HandleMessage<ThreadsMessageResult>(new ThreadsMessage(), Defaults.Timeout).Result;
-            SendResponse(response, new ThreadsResponseBody(result.Threads.Select(x => new Thread(x.Id, x.Name)).ToList()));
+            var result = _api.GetCurrentThreads();
+            SendResponse(response, new ThreadsResponseBody(result.Select(x => new Thread(x.Id, x.Name)).ToList()));
 
             LogFinish();
         }
@@ -244,8 +244,8 @@ namespace WinDbgDebug.WinDbg
                 return;
             }
 
-            var result = _wrapper.HandleMessage<VariablesMessageResult>(new VariablesMessage(parentId), Defaults.Timeout).Result;
-            SendResponse(response, new VariablesResponseBody(result.Variables.Select(ToVariable).ToList()));
+            var result = _api.GetCurrentVariables(parentId);
+            SendResponse(response, new VariablesResponseBody(result.Select(ToVariable).ToList()));
 
             LogFinish();
         }
@@ -258,8 +258,7 @@ namespace WinDbgDebug.WinDbg
         {
             if (_wrapper != null)
             {
-                _wrapper.HandleMessageWithoutResult(new TerminateMessage());
-                _wrapper.Interrupt();
+                _api.Terminate();
             }
         }
 
@@ -285,6 +284,8 @@ namespace WinDbgDebug.WinDbg
             _wrapper.ProcessExited += OnProcessExited;
             _wrapper.ThreadFinished += OnThreadFinished;
             _wrapper.ThreadStarted += OnThreadStarted;
+
+            _api = new DebuggerApi(_wrapper, Defaults.Timeout);
         }
 
         private void OnThreadStarted(object sender, int threadId)
@@ -314,6 +315,7 @@ namespace WinDbgDebug.WinDbg
             _wrapper.Dispose();
 
             _wrapper = null;
+            _api = null;
 
             SendEvent(new TerminatedEvent());
         }

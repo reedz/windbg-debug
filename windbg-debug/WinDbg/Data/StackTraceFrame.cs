@@ -1,5 +1,8 @@
-﻿namespace WinDbgDebug.WinDbg.Data
+﻿using System.Diagnostics;
+
+namespace WinDbgDebug.WinDbg.Data
 {
+    [DebuggerDisplay("<{Line}> {FilePath}")]
     public class StackTraceFrame : IIndexedItem
     {
         #region Constructor

@@ -113,6 +113,7 @@ namespace WinDbgDebug.WinDbg
         public void HandleMessageWithoutResult(Message message)
         {
             var task = HandleMessage<MessageResult>(message);
+            task.Wait();
 
             // @TODO: What to do with task ?
         }
@@ -217,6 +218,9 @@ namespace WinDbgDebug.WinDbg
 
             // Evaluate expressions c++ style.
             hr = _control.SetExpressionSyntax(DEBUG_EXPR.CPLUSPLUS);
+
+            // Show numbers in decimal system
+            hr = _control.SetRadix(10);
             return hr;
         }
 
@@ -311,6 +315,8 @@ namespace WinDbgDebug.WinDbg
         {
             int hr = HResult.Ok;
             hr = _symbols.SetSymbolPathWide(Path.GetDirectoryName(fullPath));
+
+            // @TODO: should take source path as a parameter
             hr = _symbols.SetSourcePathWide(Environment.CurrentDirectory);
             hr = _symbols.Reload(Path.GetFileNameWithoutExtension(fullPath));
             ulong handle, offset;
