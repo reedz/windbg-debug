@@ -22,7 +22,7 @@
     <ProjectGuid>{0A908B8B-6ECA-43DC-A9FE-8A85F32FD8F0}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CppDebuggee</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
     <ProjectName>CppDebuggee</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
