@@ -13,7 +13,12 @@ namespace WinDbgDebug.WinDbg
 
         public DebuggerApi(WinDbgWrapper wrapper, TimeSpan operationTimeout = default(TimeSpan))
         {
-            _wrapper = wrapper ?? throw new ArgumentNullException(nameof(wrapper));
+            if (wrapper == null)
+            {
+                throw new ArgumentNullException(nameof(wrapper));
+            }
+
+            _wrapper = wrapper;
             _timeout = operationTimeout == default(TimeSpan) ? Defaults.Timeout : operationTimeout;
         }
 
