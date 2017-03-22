@@ -1,3 +1,5 @@
+#tool "nuget:?package=NUnit.ConsoleRunner"
+
 var target = Argument("target", "Test");
 var rustInstallerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup.exe");
 
@@ -78,9 +80,7 @@ Task("Test")
 	.IsDependentOn("Install DbgEng")
 	.Does(() => 
 	{
-		NUnit("windbg-debug-tests\bin\Release\windbg-debug-tests.dll");
+		NUnit3("../windbg-debug-tests/bin/Release/windbg-debug-tests.dll");
 	});
 
 RunTarget(target);
-
-
