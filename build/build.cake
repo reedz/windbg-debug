@@ -77,17 +77,23 @@ Task("Install DbgEng")
 	
 Task("Test AppVeyor")
     .IsDependentOn("Install DbgEng")
-	.Does(() => RunTarget("RunTests"));
-
-Task("RunTests")
-    .Does(() => 
+	.Does(() => 
     {
-        NUnit3("../windbg-debug-tests/bin/Release/windbg-debug-tests.dll");
+        NUnit3(
+            "../windbg-debug-tests/bin/Release/windbg-debug-tests.dll",
+            new NUnit3Settings
+            {
+                ResultFormat = "AppVeyor",
+                Results = "myresults.xml",
+            });
     });
 
 Task("Test")
 	.IsDependentOn("Build")
 	.IsDependentOn("Install DbgEng")
-	.Does(() => RunTarget("RunTests"));
+	.Does(() => 
+    {
+        NUnit3("../windbg-debug-tests/bin/Release/windbg-debug-tests.dll");
+    });
 
 RunTarget(target);
