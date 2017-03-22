@@ -1,4 +1,4 @@
-var target = Argument("target", "Build");
+var target = Argument("target", "Test");
 var rustInstallerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup.exe");
 
 Task("Install-Rust")
@@ -33,9 +33,10 @@ Task("Build-Debugger")
     .IsDependentOn("Restore-Packages")
     .Does(() => 
     {
-        MSBuild("../windbg-debug.sln", new MSBuildSettings {
-            Configuration = "Release",
-        });
+        MSBuild("../windbg-debug.sln", new MSBuildSettings 
+		{ 
+			Configuration = "Release", 
+		});
     });
 
 Task("Build-Cpp-Debuggee")
@@ -65,6 +66,20 @@ Task("Build")
     .IsDependentOn("Build-Cpp-Debuggee")
     .IsDependentOn("Build-Rust-Debuggee")
     .Does(() => {});
+	
+Task("Install DbgEng")
+	.Does(() => 
+	{
+		ChocolateyInstall("windbg");
+	});
+	
+Task("Test")
+	.IsDependentOn("Build")
+	.IsDependentOn("Install DbgEng")
+	.Does(() => 
+	{
+		NUnit("windbg-debug-tests\bin\Release\windbg-debug-tests.dll");
+	});
 
 RunTarget(target);
 
