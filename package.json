@@ -31,13 +31,6 @@
 		"vscode": "^1.0.3",
 		"vscode-debugadapter-testsupport": "^1.15.0"
 	},
-	"scripts": {
-		"prepublish": "make build",
-		"vscode:prepublish": "make build",
-		"compile": "make build",
-		"watch": "node ./node_modules/typescript/bin/tsc -w -p ./tests",
-		"test": "node ./node_modules/mocha/bin/mocha --timeout 999999 -u tdd ./tests/out/"
-	},
 	"main": "./out/extension",
 	"activationEvents": [
 		"onCommand:extension.mock-debug.getProgramName",
