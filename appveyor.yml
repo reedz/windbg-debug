@@ -5,6 +5,7 @@ branches:
 image: Visual Studio 2015
 
 build_script:
-- ps: ./build/build.ps1 -target Test
+- ps: ./build/build.ps1 -target Build
 
-test: off
+test_script:
+- ps: ./build/build.ps1 -target "Test AppVeyor"

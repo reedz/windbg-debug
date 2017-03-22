@@ -75,12 +75,19 @@ Task("Install DbgEng")
 		ChocolateyInstall("windbg");
 	});
 	
+Task("Test AppVeyor")
+    .IsDependentOn("Install DbgEng")
+	.Does(() => RunTarget("RunTests"));
+
+Task("RunTests")
+    .Does(() => 
+    {
+        NUnit3("../windbg-debug-tests/bin/Release/windbg-debug-tests.dll");
+    });
+
 Task("Test")
 	.IsDependentOn("Build")
 	.IsDependentOn("Install DbgEng")
-	.Does(() => 
-	{
-		NUnit3("../windbg-debug-tests/bin/Release/windbg-debug-tests.dll");
-	});
+	.Does(() => RunTarget("RunTests"));
 
 RunTarget(target);
