@@ -75,19 +75,6 @@ Task("Install DbgEng")
 		ChocolateyInstall("windbg");
 	});
 	
-Task("Test AppVeyor")
-    .IsDependentOn("Install DbgEng")
-	.Does(() => 
-    {
-        NUnit3(
-            "../windbg-debug-tests/bin/Release/windbg-debug-tests.dll",
-            new NUnit3Settings
-            {
-                ResultFormat = "AppVeyor",
-                Results = "myresults.xml",
-            });
-    });
-
 Task("Test")
 	.IsDependentOn("Build")
 	.IsDependentOn("Install DbgEng")

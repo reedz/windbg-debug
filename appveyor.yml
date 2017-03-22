@@ -7,5 +7,5 @@ image: Visual Studio 2015
 build_script:
 - ps: ./build/build.ps1 -target Build
 
-test_script:
-- ps: ./build/build.ps1 -target "Test AppVeyor"
+before_test:
+- ps: ./build/build.ps1 -Target "Install DbgEng"
