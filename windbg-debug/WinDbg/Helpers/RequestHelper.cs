@@ -6,7 +6,7 @@ using System.Text;
 using Microsoft.Diagnostics.Runtime.Interop;
 using WinDbgDebug.WinDbg.Data;
 
-namespace WinDbgDebug.WinDbg
+namespace WinDbgDebug.WinDbg.Helpers
 {
     public class RequestHelper
     {
@@ -19,13 +19,13 @@ namespace WinDbgDebug.WinDbg
         private readonly IDebugDataSpaces4 _spaces;
 
         [ThreadStatic]
-        private readonly IDebugSymbols5 _symbols;
+        private readonly IDebugSymbols4 _symbols;
 
         #endregion
 
         #region Constructor
 
-        public RequestHelper(IDebugAdvanced3 advanced, IDebugDataSpaces4 spaces, IDebugSymbols5 symbols)
+        public RequestHelper(IDebugAdvanced3 advanced, IDebugDataSpaces4 spaces, IDebugSymbols4 symbols)
         {
             if (advanced == null)
                 throw new ArgumentNullException(nameof(advanced));

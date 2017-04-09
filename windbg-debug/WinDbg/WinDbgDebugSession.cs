@@ -4,10 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using log4net;
 using VSCodeDebug;
 using WinDbgDebug.WinDbg.Data;
-using WinDbgDebug.WinDbg.Messages;
-using WinDbgDebug.WinDbg.Results;
 using StackFrame = VSCodeDebug.StackFrame;
 
 namespace WinDbgDebug.WinDbg
@@ -16,7 +15,7 @@ namespace WinDbgDebug.WinDbg
     {
         #region Fields
 
-        private readonly InternalLogger _logger;
+        private readonly ILog _logger = LogManager.GetLogger(nameof(WinDbgDebugSession));
         private WinDbgWrapper _wrapper;
         private DebuggerApi _api;
 
@@ -24,10 +23,9 @@ namespace WinDbgDebug.WinDbg
 
         #region Constructor
 
-        public WinDbgDebugSession(InternalLogger logger, bool traceRequests = false, bool traceResponses = false)
+        public WinDbgDebugSession(bool traceRequests = false, bool traceResponses = false)
             : base(true, false)
         {
-            _logger = logger;
             TRACE = traceRequests;
             TRACE_RESPONSE = traceResponses;
         }
@@ -275,8 +273,7 @@ namespace WinDbgDebug.WinDbg
         private void InitializeDebugger(dynamic arguments, string debuggerEnginePath)
         {
             Action<string> loggerAction = (text) => SendEvent(new OutputEvent("stdout", text));
-            var logger = new VSCodeLogger(DynamicHelpers.To<bool>(arguments.verbose, true), loggerAction);
-            _wrapper = new WinDbgWrapper(debuggerEnginePath, logger);
+            _wrapper = new WinDbgWrapper(debuggerEnginePath);
             _wrapper.BreakpointHit += OnBreakpoint;
             _wrapper.ExceptionHit += OnException;
             _wrapper.BreakHit += OnBreak;
@@ -337,12 +334,12 @@ namespace WinDbgDebug.WinDbg
 
         private void LogStart([CallerMemberName] string method = "<Unknown>")
         {
-            _logger.Log($"{method} started.");
+            _logger.Debug($"Method '{method}' started.");
         }
 
         private void LogFinish([CallerMemberName] string method = "<Unknown>")
         {
-            _logger.Log($"{method} finished.");
+            _logger.Debug($"Method '{method}' finished.");
         }
 
         #endregion

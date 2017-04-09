@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using log4net;
 using VSCodeDebug;
 using WinDbgDebug.WinDbg;
 
@@ -13,7 +14,7 @@ namespace WinDbgDebug
         #region Fields
 
         private static CommandLineOptions _options = new CommandLineOptions();
-        private static InternalLogger _logger;
+        private static ILog _logger;
 
         #endregion
 
@@ -31,21 +32,23 @@ namespace WinDbgDebug
                 return (int)ReturnCodes.IncorrectArgumentsProvided;
             }
 
+            Logging.Configure(_options.Verbosity);
+            _logger = LogManager.GetLogger("WinDbgDebugger");
+
             if (!string.IsNullOrWhiteSpace(_options.CurrentDirectory)
                 && Directory.Exists(_options.CurrentDirectory))
             {
                 Environment.CurrentDirectory = _options.CurrentDirectory;
             }
 
-            _logger = new InternalLogger(_options.Verbose);
             if (_options.Port != -1)
             {
-                _logger.Log($"Starting to listen from network.");
+                _logger.Debug($"Starting to listen from network.");
                 RunServer(Utilities.FindFreePort(_options.Port));
             }
             else
             {
-                _logger.Log($"Starting to listen from console.");
+                _logger.Debug($"Starting to listen from console.");
                 RunSession(Console.OpenStandardInput(), Console.OpenStandardOutput());
             }
 
@@ -54,12 +57,12 @@ namespace WinDbgDebug
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            Console.WriteLine(e.ExceptionObject);
+            _logger.Fatal($"Fatal exception occured: {e.ExceptionObject} ", e.ExceptionObject as Exception);
         }
 
         private static void RunSession(Stream inputStream, Stream outputStream)
         {
-            DebugSession debugSession = new WinDbgDebugSession(_logger, _options.TraceRequests, _options.TraceResponses);
+            DebugSession debugSession = new WinDbgDebugSession(_options.TraceRequests, _options.TraceResponses);
             debugSession.Start(inputStream, outputStream).Wait();
         }
 
@@ -75,7 +78,7 @@ namespace WinDbgDebug
                     var clientSocket = serverSocket.AcceptSocket();
                     if (clientSocket != null)
                     {
-                        _logger.Log(">> accepted connection from client");
+                        _logger.Debug(">> accepted connection from client");
 
                         new System.Threading.Thread(() =>
                         {
@@ -87,11 +90,11 @@ namespace WinDbgDebug
                                 }
                                 catch (Exception e)
                                 {
-                                    _logger.Log("Exception: " + e);
+                                    _logger.Error($"Error occured during debug session: {e.Message}", e);
                                 }
                             }
                             clientSocket.Close();
-                            _logger.Log(">> client connection closed");
+                            _logger.Debug(">> client connection closed");
                         }).Start();
                     }
                 }

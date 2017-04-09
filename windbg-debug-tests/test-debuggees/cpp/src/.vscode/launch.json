@@ -6,7 +6,7 @@
             ,"type": "windbg"
             ,"request": "launch"
             ,"target": "../x64/Debug/CppDebuggee.exe"
-            ,"verbose": true
+            ,"verbosity": "debug"
             ,"windbgpath": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
             ,"workingDir": "${workspaceRoot}"
         }

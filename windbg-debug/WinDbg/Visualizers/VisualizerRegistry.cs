@@ -9,8 +9,25 @@ namespace WinDbgDebug.WinDbg.Visualizers
     {
         #region Fields
 
-        private readonly List<VisualizerBase> _registry = new List<VisualizerBase>();
-        private VisualizerBase _defaultHandler;
+        private readonly List<IVisualizer> _registry = new List<IVisualizer>();
+
+        #endregion
+
+        #region Constructor
+
+        public VisualizerRegistry(IVisualizer defaultVisualizer)
+        {
+            if (defaultVisualizer == null)
+                throw new ArgumentNullException(nameof(defaultVisualizer));
+
+            DefaultVisualizer = defaultVisualizer;
+        }
+
+        #endregion
+
+        #region Public Properties
+
+        public IVisualizer DefaultVisualizer { get; private set; }
 
         #endregion
 
@@ -24,19 +41,14 @@ namespace WinDbgDebug.WinDbg.Visualizers
             _registry.Add(item);
         }
 
-        public void SetDefaultVisualizer(VisualizerBase item)
-        {
-            _defaultHandler = item;
-        }
-
         public bool CanHandle(VariableMetaData description)
         {
-            return _defaultHandler != null || _registry.Any(x => x.CanHandle(description));
+            return DefaultVisualizer != null || _registry.Any(x => x.CanHandle(description));
         }
 
         public bool TryHandle(VariableMetaData description, out VisualizationResult result)
         {
-            var handler = _registry.FirstOrDefault(x => x.CanHandle(description)) ?? _defaultHandler;
+            var handler = _registry.FirstOrDefault(x => x.CanHandle(description)) ?? DefaultVisualizer;
             if (handler != null)
             {
                 result = handler.Handle(description);
@@ -63,9 +75,9 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Private Methods
 
-        private VisualizerBase FindHandler(VariableMetaData description)
+        private IVisualizer FindHandler(VariableMetaData description)
         {
-            var handler = _registry.FirstOrDefault(x => x.CanHandle(description)) ?? _defaultHandler;
+            var handler = _registry.FirstOrDefault(x => x.CanHandle(description)) ?? DefaultVisualizer;
             if (handler == null)
                 throw new ArgumentException($"Visualizer for handling '{description.Name}' has not been registered.", nameof(description));
             return handler;

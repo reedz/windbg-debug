@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 using WinDbgDebug.WinDbg.Data;
+using WinDbgDebug.WinDbg.Helpers;
 
 namespace WinDbgDebug.WinDbg.Visualizers
 {
@@ -17,7 +18,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustEncodedEnumVisualizer(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry, OutputCallbacks output)
+        public RustEncodedEnumVisualizer(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry, OutputCallbacks output)
             : base(helper, symbols, registry)
         {
             if (output == null)

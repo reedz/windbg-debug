@@ -2,25 +2,28 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
+using log4net;
 using Microsoft.Diagnostics.Runtime.Interop;
 using WinDbgDebug.WinDbg.Data;
+using WinDbgDebug.WinDbg.Helpers;
 
 namespace WinDbgDebug.WinDbg.Visualizers
 {
-    public abstract class VisualizerBase
+    public abstract class VisualizerBase : IVisualizer
     {
         #region Fields
 
         protected static readonly Dictionary<VariableMetaData, VisualizationResult> _empty = new Dictionary<VariableMetaData, VisualizationResult>();
         protected readonly RequestHelper _helper;
-        protected readonly IDebugSymbols5 _symbols;
+        protected readonly IDebugSymbols4 _symbols;
         protected readonly VisualizerRegistry _registry;
+        protected readonly ILog _logger;
 
         #endregion
 
         #region Constructor
 
-        protected VisualizerBase(RequestHelper helper, IDebugSymbols5 symbols, VisualizerRegistry registry)
+        protected VisualizerBase(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry)
         {
             if (helper == null)
                 throw new ArgumentNullException(nameof(helper));
@@ -34,6 +37,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
             _helper = helper;
             _symbols = symbols;
             _registry = registry;
+            _logger = LogManager.GetLogger(GetType().Name);
         }
 
         #endregion
@@ -47,7 +51,24 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         public VisualizationResult Handle(VariableMetaData meta)
         {
-            return DoHandle(meta);
+            try
+            {
+                return DoHandle(meta);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error resolving variable '{meta.Name}': {ex.Message}", ex);
+                _logger.Debug("Falling back to default visualizer ..");
+                try
+                {
+                    return _registry.DefaultVisualizer.Handle(meta);
+                }
+                catch (Exception defaultVisualizerException)
+                {
+                    _logger.Error($"Default visualizer failed to resolve variable '{meta.Name}': {defaultVisualizerException.Message}", defaultVisualizerException);
+                    return new VisualizationResult("<could not identify value>", false);
+                }
+            }
         }
 
         public IReadOnlyDictionary<VariableMetaData, VisualizationResult> GetChildren(VariableMetaData meta)
@@ -63,7 +84,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         protected string GetTypeName(_DEBUG_TYPED_DATA typedData)
         {
-            return GetSymbolType(typedData.ModBase, typedData.TypeId);
+            return _symbols.GetSymbolType(typedData.ModBase, typedData.TypeId);
         }
 
         protected string ReadString(ulong offset, uint size)
@@ -93,33 +114,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
         protected abstract bool DoCanHandle(VariableMetaData meta);
         protected abstract VisualizationResult DoHandle(VariableMetaData meta);
         protected abstract Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta);
-
-        #endregion
-
-        #region Private Methods
-
-        private string GetSymbolType(ulong moduleBase, uint typeId)
-        {
-            StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
-            uint size;
-            var hr = _symbols.GetTypeNameWide(moduleBase, typeId, buffer, buffer.Capacity, out size);
-            if (hr != HResult.Ok)
-                return string.Empty;
-
-            return buffer.ToString();
-        }
-
-        private string GetSymbolName(ulong offset)
-        {
-            StringBuilder buffer = new StringBuilder(Defaults.BufferSize);
-            uint size;
-            ulong displacement;
-            var hr = _symbols.GetNameByOffsetWide(offset, buffer, buffer.Capacity, out size, out displacement);
-            if (hr != HResult.Ok)
-                return string.Empty;
-
-            return buffer.ToString();
-        }
 
         #endregion
     }

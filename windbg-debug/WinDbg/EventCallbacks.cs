@@ -3,17 +3,17 @@ using Microsoft.Diagnostics.Runtime.Interop;
 
 namespace WinDbgDebug.WinDbg
 {
-    public class EventCallbacks : IDebugEventCallbacksWide
+    public class EventCallbacks : IDebugEventCallbacks
     {
         #region Fields
 
-        private IDebugControl6 _control;
+        private IDebugControl4 _control;
 
         #endregion
 
         #region Constructor
 
-        public EventCallbacks(IDebugControl6 control)
+        public EventCallbacks(IDebugControl4 control)
         {
             _control = control;
         }

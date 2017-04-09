@@ -8,8 +8,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net;
 using Microsoft.Diagnostics.Runtime.Interop;
 using WinDbgDebug.WinDbg.Data;
+using WinDbgDebug.WinDbg.Helpers;
 using WinDbgDebug.WinDbg.Messages;
 using WinDbgDebug.WinDbg.Results;
 using WinDbgDebug.WinDbg.Visualizers;
@@ -23,7 +25,7 @@ namespace WinDbgDebug.WinDbg
         private readonly CancellationTokenSource _cancel = new CancellationTokenSource();
         private readonly Dictionary<uint, Breakpoint> _breakpoints = new Dictionary<uint, Breakpoint>();
         private readonly Dictionary<Type, Func<Message, MessageResult>> _handlers = new Dictionary<Type, Func<Message, MessageResult>>();
-        private readonly VSCodeLogger _logger;
+        private readonly ILog _logger = LogManager.GetLogger(nameof(WinDbgWrapper));
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
         private readonly object _messagesLock = new object();
@@ -33,11 +35,11 @@ namespace WinDbgDebug.WinDbg
         private bool _notAcceptingMessages;
         private List<string> _allSymbols = new List<string>();
 
-        private IDebugControl6 _control;
+        private IDebugControl4 _control;
         private RequestHelper _requestHelper;
         private CommandExecutor _commandExecutor;
-        private IDebugClient6 _debugger;
-        private IDebugSymbols5 _symbols;
+        private IDebugClient4 _debugger;
+        private IDebugSymbols4 _symbols;
         private EventCallbacks _callbacks;
         private IDebugAdvanced3 _advanced;
         private IDebugSystemObjects3 _systemObjects;
@@ -49,17 +51,13 @@ namespace WinDbgDebug.WinDbg
 
         #region Constructor
 
-        public WinDbgWrapper(string enginePath, VSCodeLogger logger)
+        public WinDbgWrapper(string enginePath)
         {
             if (!string.IsNullOrWhiteSpace(enginePath))
                 NativeMethods.SetDllDirectory(Path.GetDirectoryName(enginePath));
 
-            if (logger == null)
-                throw new ArgumentNullException(nameof(logger));
-
             _debuggerThread = new Thread(MainLoop);
             _debuggerThread.Start(_cancel.Token);
-            _logger = logger;
             State = new DebuggerState();
         }
 
@@ -113,7 +111,6 @@ namespace WinDbgDebug.WinDbg
         public void HandleMessageWithoutResult(Message message)
         {
             var task = HandleMessage<MessageResult>(message);
-            task.Wait();
 
             // @TODO: What to do with task ?
         }
@@ -133,14 +130,14 @@ namespace WinDbgDebug.WinDbg
 
         #region Private Methods
 
-        private static IDebugClient6 CreateDebuggerClient()
+        private static IDebugClient4 CreateDebuggerClient()
         {
             IDebugClient result;
             var errorCode = NativeMethods.DebugCreate(typeof(IDebugClient).GUID, out result);
             if (errorCode != HResult.Ok)
                 throw new Exception($"Could not create debugger client. HRESULT = '{errorCode}'");
 
-            return (IDebugClient6)result;
+            return (IDebugClient4)result;
         }
 
         private static bool IsChild(uint parentSymbolListIndex, DEBUG_SYMBOL_PARAMETERS[] parameters, uint variableIndex)
@@ -658,16 +655,15 @@ namespace WinDbgDebug.WinDbg
         private void Initialize()
         {
             _debugger = CreateDebuggerClient();
-            _control = _debugger as IDebugControl6;
-            _symbols = _debugger as IDebugSymbols5;
+            _control = _debugger as IDebugControl4;
+            _symbols = _debugger as IDebugSymbols4;
             _systemObjects = _debugger as IDebugSystemObjects3;
             _advanced = _debugger as IDebugAdvanced3;
             _spaces = _debugger as IDebugDataSpaces4;
 
             _requestHelper = new RequestHelper(_advanced, _spaces, _symbols);
             _commandExecutor = new CommandExecutor(_control);
-            _visualizers = new VisualizerRegistry();
-            _output = new OutputCallbacks(_logger);
+            _output = new OutputCallbacks();
 
             _callbacks = new EventCallbacks(_control);
             _callbacks.BreakpointHit += OnBreakpoint;
@@ -677,10 +673,11 @@ namespace WinDbgDebug.WinDbg
             _callbacks.ThreadFinished += OnThreadFinished;
             _callbacks.ProcessExited += OnProcessExited;
 
-            _debugger.SetEventCallbacksWide(_callbacks);
-            _debugger.SetOutputCallbacksWide(_output);
+            _debugger.SetEventCallbacks(_callbacks);
+            _debugger.SetOutputCallbacks(_output);
             _debugger.SetInputCallbacks(new InputCallbacks());
 
+            _visualizers = new VisualizerRegistry(new DefaultVisualizer(_requestHelper, _symbols, _output));
             InitializeHandlers();
             InitializeVisualizers();
         }
@@ -693,8 +690,6 @@ namespace WinDbgDebug.WinDbg
             _visualizers.AddVisualizer(new RustSliceVisualizer(_requestHelper, _symbols, _visualizers));
             _visualizers.AddVisualizer(new RustEnumVisualizer(_requestHelper, _symbols, _visualizers, _output));
             _visualizers.AddVisualizer(new RustEncodedEnumVisualizer(_requestHelper, _symbols, _visualizers, _output));
-
-            _visualizers.SetDefaultVisualizer(new DefaultVisualizer(_requestHelper, _symbols, _visualizers, _output));
         }
 
         private void OnBreak(object sender, EventArgs e)
@@ -757,8 +752,8 @@ namespace WinDbgDebug.WinDbg
                     _callbacks.ThreadStarted -= OnThreadStarted;
                     _callbacks.ProcessExited -= OnProcessExited;
 
-                    _debugger.SetEventCallbacksWide(null);
-                    _debugger.SetOutputCallbacksWide(null);
+                    _debugger.SetEventCallbacks(null);
+                    _debugger.SetOutputCallbacks(null);
                     _debugger.SetInputCallbacks(null);
 
                     _callbacks = null;

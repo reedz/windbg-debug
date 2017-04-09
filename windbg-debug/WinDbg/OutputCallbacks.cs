@@ -1,5 +1,5 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
+using log4net;
 using Microsoft.Diagnostics.Runtime.Interop;
 
 namespace WinDbgDebug.WinDbg
@@ -8,21 +8,9 @@ namespace WinDbgDebug.WinDbg
     {
         #region Fields
 
-        private readonly VSCodeLogger _logger;
+        private readonly ILog _logger = LogManager.GetLogger(nameof(OutputCallbacks));
         private readonly StringBuilder _buffer = new StringBuilder();
         private bool _isCatching = false;
-
-        #endregion
-
-        #region Constructor
-
-        public OutputCallbacks(VSCodeLogger logger)
-        {
-            if (logger == null)
-                throw new ArgumentNullException(nameof(logger));
-
-            _logger = logger;
-        }
 
         #endregion
 
@@ -75,7 +63,7 @@ namespace WinDbgDebug.WinDbg
             if (text.Contains("\n"))
             {
                 string message = _buffer.ToString();
-                _logger.Log(message);
+                _logger.Debug(message);
                 _buffer.Clear();
             }
         }
