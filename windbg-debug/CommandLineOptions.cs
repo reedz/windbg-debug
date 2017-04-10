@@ -1,4 +1,5 @@
-﻿using CommandLine;
+﻿using System.Linq;
+using CommandLine;
 using CommandLine.Text;
 
 namespace WinDbgDebug
@@ -36,7 +37,7 @@ namespace WinDbgDebug
         public string GetUsage()
         {
             return HelpText.AutoBuild(this).ToString()
-                .Replace(VerbosityHelpTextPlaceholder, $"Print details during execution. Possible values: {string.Join(",", Logging.PossibleLogLevels)}");
+                .Replace(VerbosityHelpTextPlaceholder, $"Print details during execution. Possible values: {string.Join(",", Logging.PossibleLogLevels.Select(x => x.Name))}");
         }
 
         #endregion

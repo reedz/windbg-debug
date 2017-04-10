@@ -11,7 +11,7 @@ namespace WinDbgDebug
     {
         #region Public Fields
 
-        public static readonly string[] PossibleLogLevels = new[] { Level.Debug.Name, Level.Error.Name, Level.Fatal.Name, Level.Info.Name, Level.Warn.Name };
+        public static readonly Level[] PossibleLogLevels = new[] { Level.Debug, Level.Error, Level.Fatal, Level.Info, Level.Warn };
 
         #endregion
 
@@ -23,6 +23,8 @@ namespace WinDbgDebug
         private static readonly string _defaultClientLogLevel = Level.Info.Name;
         private static readonly string _applicationName = "WinDbgDebugger";
 
+        public static Level DefaultClientLogLevel => Level.Info;
+
         #endregion
 
         #region Public Methods
@@ -30,7 +32,7 @@ namespace WinDbgDebug
         public static void Configure(string verbosity)
         {
             GlobalContext.Properties[_logFilePathPropertyName] = GenerateLogFilePath();
-            GlobalContext.Properties[_clientLogLevelPropertyName] = ParseLogLevel(verbosity, _defaultClientLogLevel);
+            GlobalContext.Properties[_clientLogLevelPropertyName] = ParseLogLevel(verbosity, DefaultClientLogLevel.Name);
             XmlConfigurator.Configure(new FileInfo(_logConfigurationFileName));
         }
 
@@ -40,8 +42,8 @@ namespace WinDbgDebug
 
         private static string ParseLogLevel(string verbosity, string defaultClientLogLevel)
         {
-            var logLevel = PossibleLogLevels.FirstOrDefault(x => string.Equals(x, verbosity, StringComparison.OrdinalIgnoreCase));
-            return logLevel ?? defaultClientLogLevel;
+            var logLevel = PossibleLogLevels.FirstOrDefault(x => string.Equals(x.Name, verbosity, StringComparison.OrdinalIgnoreCase));
+            return logLevel.Name ?? defaultClientLogLevel;
         }
 
         private static object GenerateLogFilePath()

@@ -71,6 +71,7 @@
     <Compile Include="Defaults.cs" />
     <Compile Include="DynamicHelpers.cs" />
     <Compile Include="Logging.cs" />
+    <Compile Include="Log4Net\ThresholdFilter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <AutoGen>True</AutoGen>
@@ -141,9 +142,9 @@
     <Compile Include="WinDbg\WinDbgWrapper.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="log4net.config">
+    <None Include="log4net.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="..\windbg-debug.snk">
       <Link>windbg-debug.snk</Link>
     </None>

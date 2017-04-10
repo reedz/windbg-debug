@@ -55,9 +55,9 @@
     <Compile Include="VariableTree.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="log4net.config">
+    <None Include="log4net.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
     <None Include="packages.config" />
     <None Include="test-debuggees\cpp\src\CppDebuggee.filters" />
     <None Include="test-debuggees\cpp\src\CppDebuggee.VC.db" />
