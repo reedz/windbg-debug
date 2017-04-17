@@ -16,8 +16,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustVectorVisualizer(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry)
-            : base(helper, symbols, registry)
+        public RustVectorVisualizer(RequestHelper helper, IDebugSymbols4 symbols)
+            : base(helper, symbols)
         {
         }
 
@@ -25,12 +25,12 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Public Methods
 
-        protected override bool DoCanHandle(VariableMetaData meta)
+        public override bool CanHandle(VariableMetaData meta)
         {
             return meta.TypeName.StartsWith(_vectorTypeName, StringComparison.OrdinalIgnoreCase);
         }
 
-        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
+        public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta)
         {
             var typedData = meta.Entry;
 
@@ -38,16 +38,15 @@ namespace WinDbgDebug.WinDbg.Visualizers
             var arrayLengthField = _helper.GetField(typedData, "len");
 
             var actualLength = _helper.ReadLong(arrayLengthField);
-            var result = new Dictionary<VariableMetaData, VisualizationResult>();
             for (long i = 0; i < actualLength; i++)
             {
-                // ...
+                // @TODO
             }
 
-            return result;
+            yield break;
         }
 
-        protected override VisualizationResult DoHandle(VariableMetaData meta)
+        public override VisualizationResult Handle(VariableMetaData meta)
         {
             var typedData = meta.Entry;
 

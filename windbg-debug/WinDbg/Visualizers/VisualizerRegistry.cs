@@ -68,7 +68,18 @@ namespace WinDbgDebug.WinDbg.Visualizers
         public IReadOnlyDictionary<VariableMetaData, VisualizationResult> GetChildren(VariableMetaData description)
         {
             var handler = FindHandler(description);
-            return handler.GetChildren(description);
+            var metas = handler.GetChildren(description);
+
+            var result = new Dictionary<VariableMetaData, VisualizationResult>();
+            if (metas == null)
+                return result;
+
+            foreach (var variable in metas)
+            {
+                result.Add(variable, Handle(variable));
+            }
+
+            return result;
         }
 
         #endregion

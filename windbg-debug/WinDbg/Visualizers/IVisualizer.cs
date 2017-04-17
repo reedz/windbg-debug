@@ -7,6 +7,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
     {
         bool CanHandle(VariableMetaData meta);
         VisualizationResult Handle(VariableMetaData meta);
-        IReadOnlyDictionary<VariableMetaData, VisualizationResult> GetChildren(VariableMetaData meta);
+        IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta);
     }
 }

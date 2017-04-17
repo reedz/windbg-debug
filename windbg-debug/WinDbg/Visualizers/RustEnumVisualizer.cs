@@ -18,8 +18,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustEnumVisualizer(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry, OutputCallbacks output)
-            : base(helper, symbols, registry)
+        public RustEnumVisualizer(RequestHelper helper, IDebugSymbols4 symbols, OutputCallbacks output)
+            : base(helper, symbols)
         {
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
@@ -31,13 +31,13 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Protected Methods
 
-        protected override bool DoCanHandle(VariableMetaData meta)
+        public override bool CanHandle(VariableMetaData meta)
         {
             var fields = _helper.ReadFieldNames(meta.Entry);
             return fields.Any(x => x.StartsWith(_enumFieldName, StringComparison.OrdinalIgnoreCase));
         }
 
-        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
+        public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
             int enumValue = GetEnumValue(meta.Entry);
@@ -46,15 +46,11 @@ namespace WinDbgDebug.WinDbg.Visualizers
             var result = new Dictionary<VariableMetaData, VisualizationResult>();
             foreach (var pair in actualFields)
             {
-                var childMeta = new VariableMetaData(pair.Key, GetTypeName(pair.Value.Data), pair.Value.Data);
-                var childValue = ReHandle(childMeta);
-                result.Add(childMeta, childValue);
+                yield return new VariableMetaData(pair.Key, GetTypeName(pair.Value.Data), pair.Value.Data);
             }
-
-            return result;
         }
 
-        protected override VisualizationResult DoHandle(VariableMetaData meta)
+        public override VisualizationResult Handle(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 using WinDbgDebug.WinDbg.Data;
 using WinDbgDebug.WinDbg.Helpers;
@@ -16,8 +17,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustWtf8Visualizer(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry)
-            : base(helper, symbols, registry)
+        public RustWtf8Visualizer(RequestHelper helper, IDebugSymbols4 symbols)
+            : base(helper, symbols)
         {
         }
 
@@ -25,17 +26,17 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Public Methods
 
-        protected override bool DoCanHandle(VariableMetaData meta)
+        public override bool CanHandle(VariableMetaData meta)
         {
             return string.Equals(meta.TypeName, _typeName, StringComparison.OrdinalIgnoreCase);
         }
 
-        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData descriptor)
+        public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta)
         {
-            return _empty;
+            return Enumerable.Empty<VariableMetaData>();
         }
 
-        protected override VisualizationResult DoHandle(VariableMetaData meta)
+        public override VisualizationResult Handle(VariableMetaData meta)
         {
             var typedData = meta.Entry;
 

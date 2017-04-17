@@ -9,17 +9,11 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustEncodedEnumVisualizer : VisualizerBase
     {
-        #region Fields
-
         private static readonly string _enumEncodedFieldName = "RUST$ENCODED$ENUM";
         private readonly OutputCallbacks _output;
 
-        #endregion
-
-        #region Constructor
-
-        public RustEncodedEnumVisualizer(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry, OutputCallbacks output)
-            : base(helper, symbols, registry)
+        public RustEncodedEnumVisualizer(RequestHelper helper, IDebugSymbols4 symbols, OutputCallbacks output)
+            : base(helper, symbols)
         {
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
@@ -27,29 +21,22 @@ namespace WinDbgDebug.WinDbg.Visualizers
             _output = output;
         }
 
-        #endregion
-
-        #region Protected Methods
-
-        protected override bool DoCanHandle(VariableMetaData meta)
+        public override bool CanHandle(VariableMetaData meta)
         {
             var fields = _helper.ReadFieldNames(meta.Entry);
             return fields.Any(x => x.StartsWith(_enumEncodedFieldName, StringComparison.OrdinalIgnoreCase));
         }
 
-        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
+        public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
             var result = new Dictionary<VariableMetaData, VisualizationResult>();
             var pointerField = variable.Fields.First().Value.Data;
 
-            var childMeta = new VariableMetaData("inner", GetTypeName(pointerField), pointerField);
-            result.Add(childMeta, ReHandle(childMeta));
-
-            return result;
+            yield return new VariableMetaData("inner", GetTypeName(pointerField), pointerField);
         }
 
-        protected override VisualizationResult DoHandle(VariableMetaData meta)
+        public override VisualizationResult Handle(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
             var fullName = variable.Fields.First().Key;
@@ -61,10 +48,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return new VisualizationResult($"{meta.TypeName}::{enumName}", hasChildren);
         }
-
-        #endregion
-
-        #region Private Methods
 
         private Tuple<string, string> ReadEnumNames(_DEBUG_TYPED_DATA typedData)
         {
@@ -80,7 +63,5 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return new Tuple<string, string>(nothingPart, pointerPart);
         }
-
-        #endregion
     }
 }

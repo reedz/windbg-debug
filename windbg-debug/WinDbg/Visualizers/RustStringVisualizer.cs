@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 using WinDbgDebug.WinDbg.Data;
 using WinDbgDebug.WinDbg.Helpers;
@@ -18,8 +19,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustStringVisualizer(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry)
-            : base(helper, symbols, registry)
+        public RustStringVisualizer(RequestHelper helper, IDebugSymbols4 symbols)
+            : base(helper, symbols)
         {
         }
 
@@ -27,16 +28,16 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Public Methods
 
-        protected override bool DoCanHandle(VariableMetaData meta)
+        public override bool CanHandle(VariableMetaData meta)
         {
             return string.Equals(meta.TypeName, _stringTypeName, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(meta.TypeName, _dynamicStringTypeName, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(meta.TypeName, _shortStringName, StringComparison.OrdinalIgnoreCase);
         }
 
-        protected override VisualizationResult DoHandle(VariableMetaData meta)
+        public override VisualizationResult Handle(VariableMetaData meta)
         {
-            if (!DoCanHandle(meta))
+            if (!CanHandle(meta))
                 throw new ArgumentException($"Cannot handle '{meta}'.", nameof(meta));
 
             if (meta.TypeName.EndsWith("*"))
@@ -45,9 +46,9 @@ namespace WinDbgDebug.WinDbg.Visualizers
             return ReadStaticString(meta);
         }
 
-        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
+        public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta)
         {
-            return _empty;
+            return Enumerable.Empty<VariableMetaData>();
         }
 
         #endregion

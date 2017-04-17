@@ -684,12 +684,12 @@ namespace WinDbgDebug.WinDbg
 
         private void InitializeVisualizers()
         {
-            _visualizers.AddVisualizer(new RustStringVisualizer(_requestHelper, _symbols, _visualizers));
-            _visualizers.AddVisualizer(new RustWtf8Visualizer(_requestHelper, _symbols, _visualizers));
-            _visualizers.AddVisualizer(new RustVectorVisualizer(_requestHelper, _symbols, _visualizers));
-            _visualizers.AddVisualizer(new RustSliceVisualizer(_requestHelper, _symbols, _visualizers));
-            _visualizers.AddVisualizer(new RustEnumVisualizer(_requestHelper, _symbols, _visualizers, _output));
-            _visualizers.AddVisualizer(new RustEncodedEnumVisualizer(_requestHelper, _symbols, _visualizers, _output));
+            _visualizers.AddVisualizer(new RustStringVisualizer(_requestHelper, _symbols));
+            _visualizers.AddVisualizer(new RustWtf8Visualizer(_requestHelper, _symbols));
+            _visualizers.AddVisualizer(new RustVectorVisualizer(_requestHelper, _symbols));
+            _visualizers.AddVisualizer(new RustSliceVisualizer(_requestHelper, _symbols));
+            _visualizers.AddVisualizer(new RustEnumVisualizer(_requestHelper, _symbols, _output));
+            _visualizers.AddVisualizer(new RustEncodedEnumVisualizer(_requestHelper, _symbols, _output));
         }
 
         private void OnBreak(object sender, EventArgs e)

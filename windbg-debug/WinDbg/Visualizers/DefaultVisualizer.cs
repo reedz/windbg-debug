@@ -6,52 +6,43 @@ using WinDbgDebug.WinDbg.Helpers;
 
 namespace WinDbgDebug.WinDbg.Visualizers
 {
-    public class DefaultVisualizer : IVisualizer
+    public class DefaultVisualizer : VisualizerBase
     {
         #region Fields
 
         private readonly OutputCallbacks _output;
-        private readonly RequestHelper _helper;
-        private readonly IDebugSymbols4 _symbols;
 
         #endregion
 
         #region Constructor
 
         public DefaultVisualizer(RequestHelper helper, IDebugSymbols4 symbols, OutputCallbacks output)
+            : base(helper, symbols)
         {
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
 
-            if (symbols == null)
-                throw new ArgumentNullException(nameof(symbols));
-
-            if (helper == null)
-                throw new ArgumentNullException(nameof(helper));
-
             _output = output;
-            _helper = helper;
-            _symbols = symbols;
         }
 
         #endregion
 
         #region Public Methods
 
-        public bool CanHandle(VariableMetaData descriptor)
+        public override bool CanHandle(VariableMetaData descriptor)
         {
             return true;
         }
 
-        public IReadOnlyDictionary<VariableMetaData, VisualizationResult> GetChildren(VariableMetaData descriptor)
+        public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData descriptor)
         {
-            var result = new Dictionary<VariableMetaData, VisualizationResult>();
+            var result = new List<VariableMetaData>();
             var typedData = descriptor.Entry;
             if (typedData.Tag == (uint)SymTag.PointerType)
             {
                 var pointerValue = _helper.Dereference(typedData);
                 var meta = new VariableMetaData("inner", _symbols.GetSymbolType(pointerValue.ModBase, pointerValue.TypeId), pointerValue);
-                result.Add(meta, Handle(meta));
+                result.Add(meta);
             }
             else if (typedData.Tag == (uint)SymTag.ArrayType)
             {
@@ -65,14 +56,14 @@ namespace WinDbgDebug.WinDbg.Visualizers
                 {
                     var fieldData = _helper.GetField(typedData, field);
                     var meta = new VariableMetaData(field, _symbols.GetSymbolType(fieldData.ModBase, fieldData.TypeId), fieldData);
-                    result.Add(meta, Handle(meta));
+                    result.Add(meta);
                 }
             }
 
             return result;
         }
 
-        public VisualizationResult Handle(VariableMetaData meta)
+        public override VisualizationResult Handle(VariableMetaData meta)
         {
             var typedData = meta.Entry;
 
@@ -99,31 +90,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
             _output.Catch();
             _helper.OutputShortValue(typedData);
             return _output.StopCatching().Trim();
-        }
-
-        private uint GetArrayLength(_DEBUG_TYPED_DATA typedData)
-        {
-            var itemSize = _helper.Dereference(typedData).Size;
-            var totalSize = typedData.Size;
-
-            if (itemSize == 0)
-                return 0;
-
-            return totalSize / itemSize;
-        }
-
-        private Dictionary<VariableMetaData, VisualizationResult> ReadArray(_DEBUG_TYPED_DATA pointer, ulong size)
-        {
-            var result = new Dictionary<VariableMetaData, VisualizationResult>();
-            var dereferenced = _helper.Dereference(pointer);
-            for (ulong i = 0; i < size; i++)
-            {
-                var meta = new VariableMetaData($"[{i}]", _symbols.GetSymbolType(dereferenced.ModBase, dereferenced.TypeId), _helper.GetArrayItem(pointer, i));
-                var visualized = Handle(meta);
-                result.Add(meta, visualized);
-            }
-
-            return result;
         }
 
         #endregion

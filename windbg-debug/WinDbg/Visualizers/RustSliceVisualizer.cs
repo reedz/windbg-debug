@@ -15,8 +15,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Constructor
 
-        public RustSliceVisualizer(RequestHelper helper, IDebugSymbols4 symbols, VisualizerRegistry registry)
-            : base(helper, symbols, registry)
+        public RustSliceVisualizer(RequestHelper helper, IDebugSymbols4 symbols)
+            : base(helper, symbols)
         {
         }
 
@@ -24,12 +24,12 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
         #region Public Methods
 
-        protected override bool DoCanHandle(VariableMetaData meta)
+        public override bool CanHandle(VariableMetaData meta)
         {
             return meta.TypeName.Contains(_typeName);
         }
 
-        protected override Dictionary<VariableMetaData, VisualizationResult> DoGetChildren(VariableMetaData meta)
+        public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
             var length = variable.Fields["length"].Data.Data;
@@ -38,7 +38,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
             return ReadArray(pointer.Data, length);
         }
 
-        protected override VisualizationResult DoHandle(VariableMetaData meta)
+        public override VisualizationResult Handle(VariableMetaData meta)
         {
             var variable = _helper.ReadVariable(meta.Entry);
             var length = variable.Fields["length"].Data.Data;
