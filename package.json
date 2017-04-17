@@ -27,11 +27,10 @@
 	"dependencies": {
 	},
 	"devDependencies": {
-		"typescript": "^2.0.10",
 		"vscode": "^1.0.3",
 		"vscode-debugadapter-testsupport": "^1.15.0"
 	},
-	"main": "./out/extension",
+	"main": "./windbg-debug/bin/Release/windbg-debug.exe",
 	"activationEvents": [
 		"onCommand:extension.mock-debug.getProgramName",
 		"onCommand:extension.mock-debug.provideInitialConfigurations"
@@ -56,7 +55,8 @@
 				"configurationAttributes": {
 					"launch": {
 						"required": [
-							"target"
+							"target",
+							"windbgpath"
 						],
 						"properties": {
 							"target": {
@@ -70,38 +70,44 @@
 							"windbgpath": {
 								"type": "string",
 								"description": "Path to the dbgeng.dll library",
-								"default": "./dbgeng.dll"
+								"default": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
 							},
 							"workingDir": {
 								"type": "string",
 								"description": "Current working directory",
 								"default": "${workspaceRoot}"
 							},
-							"verbose": {
-								"type": "boolean",
-								"description": "Print debugging information to the console.",
-								"default": false
+							"verbosity": {
+								"type": "string",
+								"description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
+								"default": "info"
 							}
 						}
 					},
 					"attach": {
 						"required": [
-							"target"
+							"target",
+							"windbgpath"
 						],
 						"properties": {
 							"target": {
 								"type": "string",
 								"description": "PID of running program"
 							},
-							"verbose": {
-								"type": "boolean",
-								"description": "Print debugging information to the console.",
-								"default": false
-							},
 							"windbgpath": {
 								"type": "string",
 								"description": "Path to the dbgeng.dll library",
-								"default": "./dbgeng.dll"
+								"default": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
+							},
+							"workingDir": {
+								"type": "string",
+								"description": "Current working directory",
+								"default": "${workspaceRoot}"
+							},
+							"verbosity": {
+								"type": "string",
+								"description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
+								"default": "info"
 							}
 						}
 					}
