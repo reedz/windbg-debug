@@ -7,13 +7,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class VisualizerRegistry
     {
-        #region Fields
-
         private readonly List<IVisualizer> _registry = new List<IVisualizer>();
-
-        #endregion
-
-        #region Constructor
 
         public VisualizerRegistry(IVisualizer defaultVisualizer)
         {
@@ -23,15 +17,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
             DefaultVisualizer = defaultVisualizer;
         }
 
-        #endregion
-
-        #region Public Properties
-
         public IVisualizer DefaultVisualizer { get; private set; }
-
-        #endregion
-
-        #region Public Methods
 
         public void AddVisualizer(VisualizerBase item)
         {
@@ -82,10 +68,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
             return result;
         }
 
-        #endregion
-
-        #region Private Methods
-
         private IVisualizer FindHandler(VariableMetaData description)
         {
             var handler = _registry.FirstOrDefault(x => x.CanHandle(description)) ?? DefaultVisualizer;
@@ -93,7 +75,5 @@ namespace WinDbgDebug.WinDbg.Visualizers
                 throw new ArgumentException($"Visualizer for handling '{description.Name}' has not been registered.", nameof(description));
             return handler;
         }
-
-        #endregion
     }
 }

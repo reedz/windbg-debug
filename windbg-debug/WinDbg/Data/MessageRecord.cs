@@ -6,8 +6,6 @@ namespace WinDbgDebug.WinDbg.Data
 {
     public class MessageRecord
     {
-        #region Constructor
-
         public MessageRecord(Message message, Action<MessageResult> resultSetter)
         {
             if (message == null)
@@ -20,13 +18,7 @@ namespace WinDbgDebug.WinDbg.Data
             ResultSetter = resultSetter;
         }
 
-        #endregion
-
-        #region Public Properties
-
         public Message Message { get; private set; }
         public Action<MessageResult> ResultSetter { get; private set; }
-
-        #endregion
     }
 }

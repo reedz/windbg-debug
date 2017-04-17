@@ -11,14 +11,8 @@ namespace WinDbgDebug
 {
     internal class Program
     {
-        #region Fields
-
         private static CommandLineOptions _options = new CommandLineOptions();
         private static ILog _logger;
-
-        #endregion
-
-        #region Private Methods
 
         private static int Main(string[] args)
         {
@@ -100,7 +94,5 @@ namespace WinDbgDebug
                 }
             }).Start();
         }
-
-        #endregion
     }
 }

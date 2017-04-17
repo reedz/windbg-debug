@@ -4,8 +4,6 @@ namespace WinDbgDebug.WinDbg
 {
     public class InputCallbacks : IDebugInputCallbacks
     {
-        #region Public Methods
-
         public int EndInput()
         {
             return 0;
@@ -15,7 +13,5 @@ namespace WinDbgDebug.WinDbg
         {
             return 0;
         }
-
-        #endregion
     }
 }

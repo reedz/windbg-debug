@@ -4,8 +4,6 @@ namespace WinDbgDebug.WinDbg.Data
 {
     public class Scope : IIndexedItem
     {
-        #region Constructor
-
         public Scope(int id, string name)
         {
             if (id <= 0)
@@ -18,13 +16,7 @@ namespace WinDbgDebug.WinDbg.Data
             Id = id;
         }
 
-        #endregion
-
-        #region Public Properties
-
         public int Id { get; private set; }
         public string Name { get; private set; }
-
-        #endregion
     }
 }

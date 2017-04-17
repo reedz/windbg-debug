@@ -5,22 +5,12 @@ namespace WinDbgDebug.WinDbg
 {
     public class EventCallbacks : IDebugEventCallbacks
     {
-        #region Fields
-
         private IDebugControl4 _control;
-
-        #endregion
-
-        #region Constructor
 
         public EventCallbacks(IDebugControl4 control)
         {
             _control = control;
         }
-
-        #endregion
-
-        #region Public Events
 
         public event EventHandler<IDebugBreakpoint> BreakpointHit;
         public event EventHandler<EXCEPTION_RECORD64> ExceptionHit;
@@ -28,10 +18,6 @@ namespace WinDbgDebug.WinDbg
         public event EventHandler<int> ProcessExited;
         public event EventHandler ThreadStarted;
         public event EventHandler ThreadFinished;
-
-        #endregion
-
-        #region Public Methods
 
         public int Breakpoint(IDebugBreakpoint2 breakpoint)
         {
@@ -127,7 +113,5 @@ namespace WinDbgDebug.WinDbg
         {
             return HResult.Ok;
         }
-
-        #endregion
     }
 }

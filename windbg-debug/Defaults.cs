@@ -5,8 +5,6 @@ namespace WinDbgDebug
 {
     public static class Defaults
     {
-        #region Fields
-
         public static readonly int BufferSize = 1024;
         public static readonly ulong CurrentOffset = 0;
         public static readonly DEBUG_CREATE_PROCESS DEBUG = (DEBUG_CREATE_PROCESS)DEBUG_PROCESS.DETACH_ON_EXIT;
@@ -23,7 +21,5 @@ namespace WinDbgDebug
         public static readonly int MaxStringSize = 200;
         public static readonly int NotFound = -1;
         public static readonly string UnknownValue = "<Unknown>";
-
-        #endregion
     }
 }

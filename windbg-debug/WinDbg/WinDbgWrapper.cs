@@ -20,8 +20,6 @@ namespace WinDbgDebug.WinDbg
 {
     public sealed class WinDbgWrapper : IDisposable
     {
-        #region Fields
-
         private readonly CancellationTokenSource _cancel = new CancellationTokenSource();
         private readonly Dictionary<uint, Breakpoint> _breakpoints = new Dictionary<uint, Breakpoint>();
         private readonly Dictionary<Type, Func<Message, MessageResult>> _handlers = new Dictionary<Type, Func<Message, MessageResult>>();
@@ -47,10 +45,6 @@ namespace WinDbgDebug.WinDbg
         private VisualizerRegistry _visualizers;
         private OutputCallbacks _output;
 
-        #endregion
-
-        #region Constructor
-
         public WinDbgWrapper(string enginePath)
         {
             if (!string.IsNullOrWhiteSpace(enginePath))
@@ -66,10 +60,6 @@ namespace WinDbgDebug.WinDbg
             Dispose(false);
         }
 
-        #endregion
-
-        #region Public Events
-
         public event BreakpointHitHandler BreakpointHit;
         public event ExceptionHitHandler ExceptionHit;
         public event BreakHandler BreakHit;
@@ -78,15 +68,7 @@ namespace WinDbgDebug.WinDbg
         public event EventHandler<int> ThreadFinished;
         public event EventHandler ProcessExited;
 
-        #endregion
-
-        #region Public Properties
-
         public DebuggerState State { get; private set; }
-
-        #endregion
-
-        #region Public Methods
 
         public Task<TResult> HandleMessage<TResult>(Message message, TimeSpan timeout = default(TimeSpan))
             where TResult : MessageResult
@@ -125,10 +107,6 @@ namespace WinDbgDebug.WinDbg
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
-        #endregion
-
-        #region Private Methods
 
         private static IDebugClient4 CreateDebuggerClient()
         {
@@ -776,7 +754,5 @@ namespace WinDbgDebug.WinDbg
                 _isDisposed = true;
             }
         }
-
-        #endregion
     }
 }

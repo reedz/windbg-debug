@@ -9,22 +9,12 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustWtf8Visualizer : VisualizerBase
     {
-        #region Fields
-
         private static readonly string _typeName = "struct std::sys_common::wtf8::Wtf8";
-
-        #endregion
-
-        #region Constructor
 
         public RustWtf8Visualizer(RequestHelper helper, IDebugSymbols4 symbols)
             : base(helper, symbols)
         {
         }
-
-        #endregion
-
-        #region Public Methods
 
         public override bool CanHandle(VariableMetaData meta)
         {
@@ -46,7 +36,5 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return new VisualizationResult(actualString, false);
         }
-
-        #endregion
     }
 }

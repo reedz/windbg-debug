@@ -6,8 +6,6 @@ namespace WinDbgDebug.WinDbg.Results
 {
     public class ScopesMessageResult : MessageResult
     {
-        #region Constructor
-
         public ScopesMessageResult(IEnumerable<Scope> scopes)
         {
             if (scopes == null)
@@ -16,12 +14,6 @@ namespace WinDbgDebug.WinDbg.Results
             Scopes = scopes;
         }
 
-        #endregion
-
-        #region Public Properties
-
         public IEnumerable<Scope> Scopes { get; private set; }
-
-        #endregion
     }
 }

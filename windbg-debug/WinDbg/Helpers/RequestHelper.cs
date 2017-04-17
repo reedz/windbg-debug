@@ -10,8 +10,6 @@ namespace WinDbgDebug.WinDbg.Helpers
 {
     public class RequestHelper
     {
-        #region Fields
-
         [ThreadStatic]
         private readonly IDebugAdvanced3 _advanced;
 
@@ -20,10 +18,6 @@ namespace WinDbgDebug.WinDbg.Helpers
 
         [ThreadStatic]
         private readonly IDebugSymbols4 _symbols;
-
-        #endregion
-
-        #region Constructor
 
         public RequestHelper(IDebugAdvanced3 advanced, IDebugDataSpaces4 spaces, IDebugSymbols4 symbols)
         {
@@ -40,10 +34,6 @@ namespace WinDbgDebug.WinDbg.Helpers
             _spaces = spaces;
             _symbols = symbols;
         }
-
-        #endregion
-
-        #region Public Methods
 
         public _DEBUG_TYPED_DATA CreateTypedData(ulong modBase, ulong offset, uint typeId)
         {
@@ -224,10 +214,6 @@ namespace WinDbgDebug.WinDbg.Helpers
             return new TypedVariable(data, dereferenced, fieldsMap);
         }
 
-        #endregion
-
-        #region Private Methods
-
         private static string GetKey(Dictionary<string, TypedVariable> fieldsMap, string baseKey)
         {
             var key = baseKey;
@@ -290,7 +276,5 @@ namespace WinDbgDebug.WinDbg.Helpers
 
             return FromBytes(resultBuffer);
         }
-
-        #endregion
     }
 }

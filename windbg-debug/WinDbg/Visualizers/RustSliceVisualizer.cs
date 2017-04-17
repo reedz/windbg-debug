@@ -7,22 +7,12 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustSliceVisualizer : VisualizerBase
     {
-        #region Fields
-
         private static readonly string _typeName = "&[";
-
-        #endregion
-
-        #region Constructor
 
         public RustSliceVisualizer(RequestHelper helper, IDebugSymbols4 symbols)
             : base(helper, symbols)
         {
         }
-
-        #endregion
-
-        #region Public Methods
 
         public override bool CanHandle(VariableMetaData meta)
         {
@@ -45,7 +35,5 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return new VisualizationResult($"{meta.TypeName} [{length}]", length > 0);
         }
-
-        #endregion
     }
 }

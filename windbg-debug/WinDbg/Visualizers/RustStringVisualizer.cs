@@ -9,24 +9,14 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustStringVisualizer : VisualizerBase
     {
-        #region Fields
-
         private static readonly string _stringTypeName = "struct &str";
         private static readonly string _dynamicStringTypeName = "struct &str *";
         private static readonly string _shortStringName = "&str";
-
-        #endregion
-
-        #region Constructor
 
         public RustStringVisualizer(RequestHelper helper, IDebugSymbols4 symbols)
             : base(helper, symbols)
         {
         }
-
-        #endregion
-
-        #region Public Methods
 
         public override bool CanHandle(VariableMetaData meta)
         {
@@ -50,10 +40,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
         {
             return Enumerable.Empty<VariableMetaData>();
         }
-
-        #endregion
-
-        #region Private Methods
 
         private static string Enquote(string actualString)
         {
@@ -80,7 +66,5 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return new VisualizationResult(Enquote(actualString), false);
         }
-
-        #endregion
     }
 }

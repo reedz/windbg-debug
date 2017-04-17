@@ -6,15 +6,9 @@ namespace WinDbgDebug.WinDbg
 {
     public class OutputCallbacks : IDebugOutputCallbacks2
     {
-        #region Fields
-
         private readonly ILog _logger = LogManager.GetLogger(nameof(OutputCallbacks));
         private readonly StringBuilder _buffer = new StringBuilder();
         private bool _isCatching = false;
-
-        #endregion
-
-        #region Public Methods
 
         public int GetInterestMask(out DEBUG_OUTCBI Mask)
         {
@@ -51,10 +45,6 @@ namespace WinDbgDebug.WinDbg
             return result;
         }
 
-        #endregion
-
-        #region Private Methods
-
         private void DoOutput(string text)
         {
             if (_isCatching)
@@ -67,7 +57,5 @@ namespace WinDbgDebug.WinDbg
                 _buffer.Clear();
             }
         }
-
-        #endregion
     }
 }

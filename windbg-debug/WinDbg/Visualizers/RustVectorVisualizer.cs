@@ -8,22 +8,12 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustVectorVisualizer : VisualizerBase
     {
-        #region Fields
-
         private static readonly string _vectorTypeName = "struct collections::vec::Vec";
-
-        #endregion
-
-        #region Constructor
 
         public RustVectorVisualizer(RequestHelper helper, IDebugSymbols4 symbols)
             : base(helper, symbols)
         {
         }
-
-        #endregion
-
-        #region Public Methods
 
         public override bool CanHandle(VariableMetaData meta)
         {
@@ -58,7 +48,5 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return new VisualizationResult(value, actualLength > 0);
         }
-
-        #endregion
     }
 }

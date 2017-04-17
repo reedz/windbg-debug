@@ -13,15 +13,9 @@ namespace WinDbgDebug.WinDbg
 {
     public class WinDbgDebugSession : DebugSession
     {
-        #region Fields
-
         private readonly ILog _logger = LogManager.GetLogger(nameof(WinDbgDebugSession));
         private WinDbgWrapper _wrapper;
         private DebuggerApi _api;
-
-        #endregion
-
-        #region Constructor
 
         public WinDbgDebugSession(bool traceRequests = false, bool traceResponses = false)
             : base(true, false)
@@ -29,10 +23,6 @@ namespace WinDbgDebug.WinDbg
             TRACE = traceRequests;
             TRACE_RESPONSE = traceResponses;
         }
-
-        #endregion
-
-        #region DebugSession implementation
 
         public override void Attach(Response response, dynamic arguments)
         {
@@ -248,10 +238,6 @@ namespace WinDbgDebug.WinDbg
             LogFinish();
         }
 
-        #endregion
-
-        #region Private Methods
-
         private void StopDebugging()
         {
             if (_wrapper != null)
@@ -341,7 +327,5 @@ namespace WinDbgDebug.WinDbg
         {
             _logger.Debug($"Method '{method}' finished.");
         }
-
-        #endregion
     }
 }

@@ -9,14 +9,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class RustEnumVisualizer : VisualizerBase
     {
-        #region Fields
-
         private static readonly string _enumFieldName = "RUST$ENUM$";
         private readonly OutputCallbacks _output;
-
-        #endregion
-
-        #region Constructor
 
         public RustEnumVisualizer(RequestHelper helper, IDebugSymbols4 symbols, OutputCallbacks output)
             : base(helper, symbols)
@@ -26,10 +20,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             _output = output;
         }
-
-        #endregion
-
-        #region Protected Methods
 
         public override bool CanHandle(VariableMetaData meta)
         {
@@ -61,10 +51,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return new VisualizationResult($"{meta.TypeName}::{enumName}", hasChildren);
         }
-
-        #endregion
-
-        #region Private Methods
 
         private static Dictionary<string, TypedVariable> GetChildFields(TypedVariable variable, int enumValue)
         {
@@ -107,7 +93,5 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             return result;
         }
-
-        #endregion
     }
 }

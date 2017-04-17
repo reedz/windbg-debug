@@ -7,14 +7,8 @@ namespace WinDbgDebug.WinDbg
 {
     public static class NativeMethods
     {
-        #region Fields
-
         private const string KernelLibraryName = "kernel32.dll";
         private const string DebuggerEngineLibraryName = "dbgeng.dll";
-
-        #endregion
-
-        #region Public Methods
 
         [DllImport(DebuggerEngineLibraryName, EntryPoint = "DebugCreate", SetLastError = false, CallingConvention = CallingConvention.StdCall)]
         public static extern int DebugCreate([In][MarshalAs(UnmanagedType.LPStruct)]Guid interfaceId, out IDebugClient debugClient);
@@ -41,7 +35,5 @@ namespace WinDbgDebug.WinDbg
             [In] IntPtr hModule,
             [Out] StringBuilder lpFilename,
             [In][MarshalAs(UnmanagedType.U4)] int nSize);
-
-        #endregion
     }
 }

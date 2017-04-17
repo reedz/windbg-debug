@@ -2,8 +2,6 @@
 {
     public class LaunchMessageResult : MessageResult
     {
-        #region Constructor
-
         public LaunchMessageResult()
             : this(null)
         {
@@ -14,16 +12,10 @@
             Error = error;
         }
 
-        #endregion
-
-        #region Public Properties
-
         public bool Success
         {
             get { return string.IsNullOrEmpty(Error); }
         }
         public string Error { get; private set; }
-
-        #endregion
     }
 }

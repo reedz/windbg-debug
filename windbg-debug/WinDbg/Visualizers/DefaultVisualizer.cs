@@ -8,13 +8,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class DefaultVisualizer : VisualizerBase
     {
-        #region Fields
-
         private readonly OutputCallbacks _output;
-
-        #endregion
-
-        #region Constructor
 
         public DefaultVisualizer(RequestHelper helper, IDebugSymbols4 symbols, OutputCallbacks output)
             : base(helper, symbols)
@@ -24,10 +18,6 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             _output = output;
         }
-
-        #endregion
-
-        #region Public Methods
 
         public override bool CanHandle(VariableMetaData descriptor)
         {
@@ -81,17 +71,11 @@ namespace WinDbgDebug.WinDbg.Visualizers
             return new VisualizationResult(GetDefaultValue(typedData), fieldNames.Length > 0);
         }
 
-        #endregion
-
-        #region Private Methods
-
         private string GetDefaultValue(_DEBUG_TYPED_DATA typedData)
         {
             _output.Catch();
             _helper.OutputShortValue(typedData);
             return _output.StopCatching().Trim();
         }
-
-        #endregion
     }
 }

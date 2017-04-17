@@ -9,8 +9,6 @@ namespace WinDbgDebug.WinDbg
 {
     public class DebuggerState
     {
-        #region Fields
-
         private int _indexCounter = Defaults.FirstIndex;
         private Dictionary<int, StackTraceFrame> _frames = new Dictionary<int, StackTraceFrame>();
         private Dictionary<int, Scope> _scopes = new Dictionary<int, Scope>();
@@ -20,16 +18,8 @@ namespace WinDbgDebug.WinDbg
         private Dictionary<int, HashSet<int>> _children = new Dictionary<int, HashSet<int>>();
         private Dictionary<int, VariableMetaData> _variableDescriptions = new Dictionary<int, VariableMetaData>();
 
-        #endregion
-
-        #region Public Properties
-
         public int CurrentThread { get; internal set; }
         public int CurrentFrame { get; internal set; }
-
-        #endregion
-
-        #region Public Methods
 
         public IEnumerable<DebuggeeThread> GetThreads()
         {
@@ -156,10 +146,6 @@ namespace WinDbgDebug.WinDbg
             return GetItem(variableId, _variableDescriptions);
         }
 
-        #endregion
-
-        #region Private Methods
-
         private List<T> GetChildren<T>(int parentId, Dictionary<int, T> container)
         {
             HashSet<int> indices;
@@ -241,7 +227,5 @@ namespace WinDbgDebug.WinDbg
 
             return result;
         }
-
-        #endregion
     }
 }
