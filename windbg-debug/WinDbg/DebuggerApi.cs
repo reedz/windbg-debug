@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using WinDbgDebug.WinDbg.Data;
 using WinDbgDebug.WinDbg.Messages;
 using WinDbgDebug.WinDbg.Results;
@@ -28,15 +29,17 @@ namespace WinDbgDebug.WinDbg
             return result.Error;
         }
 
-        public void StepOver()
+        public Task StepOver()
         {
-            _wrapper.HandleMessageWithoutResult(new StepOverMessage());
+            return _wrapper.HandleMessageWithoutResult(new StepOverMessage());
         }
 
-        public void Pause()
+        public Task Pause()
         {
-            _wrapper.HandleMessageWithoutResult(new PauseMessage());
+            var result = _wrapper.HandleMessageWithoutResult(new PauseMessage());
             _wrapper.Interrupt();
+
+            return result;
         }
 
         public IEnumerable<Scope> GetCurrentScopes(int frameId)
@@ -60,14 +63,14 @@ namespace WinDbgDebug.WinDbg
             return result.Frames;
         }
 
-        public void StepInto()
+        public Task StepInto()
         {
-            _wrapper.HandleMessageWithoutResult(new StepIntoMessage());
+            return _wrapper.HandleMessageWithoutResult(new StepIntoMessage());
         }
 
-        public void StepOut()
+        public Task StepOut()
         {
-            _wrapper.HandleMessageWithoutResult(new StepOutMessage());
+            return _wrapper.HandleMessageWithoutResult(new StepOutMessage());
         }
 
         public IEnumerable<DebuggeeThread> GetCurrentThreads()
@@ -91,15 +94,17 @@ namespace WinDbgDebug.WinDbg
             return result.Value;
         }
 
-        public void Terminate()
+        public Task Terminate()
         {
-            _wrapper.HandleMessageWithoutResult(new TerminateMessage());
+            var result = _wrapper.HandleMessageWithoutResult(new TerminateMessage());
             _wrapper.Interrupt();
+
+            return result;
         }
 
-        public void Continue()
+        public Task Continue()
         {
-            _wrapper.HandleMessageWithoutResult(new ContinueMessage());
+            return _wrapper.HandleMessageWithoutResult(new ContinueMessage());
         }
 
         public string Attach(int processId)

@@ -10,18 +10,20 @@ namespace WinDbgDebug.WinDbg.Visualizers
     public class RustStringVisualizer : VisualizerBase
     {
         private static readonly string _stringTypeName = "struct &str";
-        private static readonly string _dynamicStringTypeName = "struct &str *";
+        private static readonly string _dynamicStringTypeName = "string::String";
         private static readonly string _shortStringName = "&str";
+        private readonly DebuggedProcessInfo _metaData;
 
-        public RustStringVisualizer(RequestHelper helper, IDebugSymbols4 symbols)
+        public RustStringVisualizer(RequestHelper helper, IDebugSymbols4 symbols, DebuggedProcessInfo metaData)
             : base(helper, symbols)
         {
+            _metaData = metaData;
         }
 
         public override bool CanHandle(VariableMetaData meta)
         {
             return string.Equals(meta.TypeName, _stringTypeName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(meta.TypeName, _dynamicStringTypeName, StringComparison.OrdinalIgnoreCase)
+                || meta.TypeName.Contains(_dynamicStringTypeName)
                 || string.Equals(meta.TypeName, _shortStringName, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -30,7 +32,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
             if (!CanHandle(meta))
                 throw new ArgumentException($"Cannot handle '{meta}'.", nameof(meta));
 
-            if (meta.TypeName.EndsWith("*"))
+            if (meta.TypeName.EndsWith(_dynamicStringTypeName))
                 return ReadPointerString(meta);
 
             return ReadStaticString(meta);
@@ -50,19 +52,28 @@ namespace WinDbgDebug.WinDbg.Visualizers
         {
             var variableRead = _helper.ReadVariable(meta.Entry);
             var stringLength = variableRead.Fields["length"].Data.Data;
-            var stringPointer = BitConverter.ToUInt64(_helper.ReadValue(variableRead.Data.Offset, variableRead.Data.Size), 0);
-            var actualString = ReadString(stringPointer, (uint)stringLength);
+
+            string actualString = ReadString(variableRead, stringLength);
 
             return new VisualizationResult(Enquote(actualString), false);
         }
 
+        private string ReadString(TypedVariable stringContainer, ulong stringLength)
+        {
+            // stringContainer.Data.Size actually lies - we should use Process bitness instead.
+            var pointerValue = _helper.ReadValue(stringContainer.Data.Offset, (uint)_metaData.PointerSize);
+            var stringPointer = _metaData.Is64BitProcess ? BitConverter.ToUInt64(pointerValue, 0) : BitConverter.ToUInt32(pointerValue, 0);
+            var actualString = _helper.ReadString(stringPointer, (uint)stringLength);
+            return actualString;
+        }
+
         private VisualizationResult ReadPointerString(VariableMetaData meta)
         {
-            var dereferenced = _helper.Dereference(meta.Entry);
+            var variableTree = _helper.ReadVariable(meta.Entry);
+            var stringLength = variableTree.Fields.First().Value.Fields["len"].Data.Data;
+            var stringContainer = variableTree.Fields.First().Value.Fields["buf"];
 
-            var bigString = ReadString(dereferenced.Offset, (uint)Defaults.MaxStringSize);
-            var endIndex = bigString.IndexOf('\0');
-            string actualString = endIndex == Defaults.NotFound ? $"{bigString}..." : bigString.Substring(0, endIndex);
+            var actualString = ReadString(stringContainer, stringLength);
 
             return new VisualizationResult(Enquote(actualString), false);
         }

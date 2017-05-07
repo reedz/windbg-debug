@@ -33,14 +33,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
             return _symbols.GetSymbolType(typedData.ModBase, typedData.TypeId);
         }
 
-        protected string ReadString(ulong offset, uint size)
-        {
-            return Encoding.Default.GetString(_helper.ReadValue(offset, size));
-        }
-
         protected IEnumerable<VariableMetaData> ReadArray(_DEBUG_TYPED_DATA pointer, ulong size)
         {
-            var result = new Dictionary<VariableMetaData, VisualizationResult>();
             var dereferenced = _helper.Dereference(pointer);
             for (ulong i = 0; i < size; i++)
             {

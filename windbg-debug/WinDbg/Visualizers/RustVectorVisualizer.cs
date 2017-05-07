@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 using WinDbgDebug.WinDbg.Data;
 using WinDbgDebug.WinDbg.Helpers;
@@ -28,12 +29,10 @@ namespace WinDbgDebug.WinDbg.Visualizers
             var arrayLengthField = _helper.GetField(typedData, "len");
 
             var actualLength = _helper.ReadLong(arrayLengthField);
-            for (long i = 0; i < actualLength; i++)
-            {
-                // @TODO
-            }
+            var fieldHierarchy = _helper.ReadVariable(arrayField);
+            var dataPointer = fieldHierarchy.Flatten().FirstOrDefault(x => (SymTag)x.Tag == SymTag.PointerType);
 
-            yield break;
+            return ReadArray(dataPointer, (ulong)actualLength);
         }
 
         public override VisualizationResult Handle(VariableMetaData meta)

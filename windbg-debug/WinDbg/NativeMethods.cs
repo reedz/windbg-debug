@@ -35,5 +35,9 @@ namespace WinDbgDebug.WinDbg
             [In] IntPtr hModule,
             [Out] StringBuilder lpFilename,
             [In][MarshalAs(UnmanagedType.U4)] int nSize);
+
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsWow64Process([In] IntPtr process, [Out] out bool wow64Process);
     }
 }

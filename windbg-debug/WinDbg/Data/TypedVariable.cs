@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Microsoft.Diagnostics.Runtime.Interop;
 
 namespace WinDbgDebug.WinDbg.Data
@@ -20,5 +21,10 @@ namespace WinDbgDebug.WinDbg.Data
         public ReadOnlyDictionary<string, TypedVariable> Fields { get; private set; }
         public _DEBUG_TYPED_DATA Data { get; private set; }
         public _DEBUG_TYPED_DATA Dereferenced { get; private set; }
+
+        public IEnumerable<_DEBUG_TYPED_DATA> Flatten()
+        {
+            return new[] { Data, Dereferenced }.Concat(Fields.Values.SelectMany(x => x.Flatten()));
+        }
     }
 }

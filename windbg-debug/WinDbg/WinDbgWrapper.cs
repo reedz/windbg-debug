@@ -41,7 +41,7 @@ namespace WinDbgDebug.WinDbg
         private EventCallbacks _callbacks;
         private IDebugAdvanced3 _advanced;
         private IDebugSystemObjects3 _systemObjects;
-        private IDebugDataSpaces4 _spaces;
+        private IDebugDataSpaces _spaces;
         private VisualizerRegistry _visualizers;
         private OutputCallbacks _output;
 
@@ -69,6 +69,7 @@ namespace WinDbgDebug.WinDbg
         public event EventHandler ProcessExited;
 
         public DebuggerState State { get; private set; }
+        public DebuggedProcessInfo ProcessInfo { get; private set; }
 
         public Task<TResult> HandleMessage<TResult>(Message message, TimeSpan timeout = default(TimeSpan))
             where TResult : MessageResult
@@ -90,11 +91,9 @@ namespace WinDbgDebug.WinDbg
             }
         }
 
-        public void HandleMessageWithoutResult(Message message)
+        public Task HandleMessageWithoutResult(Message message)
         {
-            var task = HandleMessage<MessageResult>(message);
-
-            // @TODO: What to do with task ?
+            return HandleMessage<MessageResult>(message);
         }
 
         public void Interrupt()
@@ -182,6 +181,7 @@ namespace WinDbgDebug.WinDbg
                 return new AttachMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
 
             SetDebugSettings();
+            PostInitialize();
 
             return new AttachMessageResult();
         }
@@ -195,8 +195,18 @@ namespace WinDbgDebug.WinDbg
             hr = _control.SetExpressionSyntax(DEBUG_EXPR.CPLUSPLUS);
 
             // Show numbers in decimal system
-            hr = _control.SetRadix(10);
+            ////hr = _control.SetRadix(10);
+
             return hr;
+        }
+
+        private void CreateProcessInfo(uint systemId)
+        {
+            ProcessInfo = new DebuggedProcessInfo
+            {
+                ProcessId = systemId,
+                Is64BitProcess = Process.GetProcessById((int)systemId).Is64BitProcess(),
+            };
         }
 
         private MessageResult DoEndSession()
@@ -282,8 +292,19 @@ namespace WinDbgDebug.WinDbg
                 return new LaunchMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
 
             SetDebugSettings();
+            PostInitialize();
 
             return new LaunchMessageResult();
+        }
+
+        private void PostInitialize()
+        {
+            uint systemId;
+            var hr = _systemObjects.GetCurrentProcessSystemId(out systemId);
+            if (hr == HResult.Ok)
+                CreateProcessInfo(systemId);
+
+            InitializeVisualizers();
         }
 
         private int ForceLoadSymbols(string fullPath)
@@ -657,12 +678,11 @@ namespace WinDbgDebug.WinDbg
 
             _visualizers = new VisualizerRegistry(new DefaultVisualizer(_requestHelper, _symbols, _output));
             InitializeHandlers();
-            InitializeVisualizers();
         }
 
         private void InitializeVisualizers()
         {
-            _visualizers.AddVisualizer(new RustStringVisualizer(_requestHelper, _symbols));
+            _visualizers.AddVisualizer(new RustStringVisualizer(_requestHelper, _symbols, ProcessInfo));
             _visualizers.AddVisualizer(new RustWtf8Visualizer(_requestHelper, _symbols));
             _visualizers.AddVisualizer(new RustVectorVisualizer(_requestHelper, _symbols));
             _visualizers.AddVisualizer(new RustSliceVisualizer(_requestHelper, _symbols));
@@ -748,6 +768,7 @@ namespace WinDbgDebug.WinDbg
                 _symbols = null;
                 _spaces = null;
                 _systemObjects = null;
+
                 _advanced = null;
                 _requestHelper = null;
 

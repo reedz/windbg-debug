@@ -14,12 +14,12 @@ namespace WinDbgDebug.WinDbg.Helpers
         private readonly IDebugAdvanced3 _advanced;
 
         [ThreadStatic]
-        private readonly IDebugDataSpaces4 _spaces;
+        private readonly IDebugDataSpaces _spaces;
 
         [ThreadStatic]
         private readonly IDebugSymbols4 _symbols;
 
-        public RequestHelper(IDebugAdvanced3 advanced, IDebugDataSpaces4 spaces, IDebugSymbols4 symbols)
+        public RequestHelper(IDebugAdvanced3 advanced, IDebugDataSpaces spaces, IDebugSymbols4 symbols)
         {
             if (advanced == null)
                 throw new ArgumentNullException(nameof(advanced));
@@ -147,13 +147,7 @@ namespace WinDbgDebug.WinDbg.Helpers
 
         public string ReadString(ulong offset, uint size)
         {
-            var buffer = new StringBuilder((int)size);
-            uint actualBytes;
-            var hr = _spaces.ReadUnicodeStringVirtual(offset, size, CODE_PAGE.UTF8, buffer, size, out actualBytes);
-            if (hr != HResult.Ok)
-                return string.Empty;
-
-            return buffer.ToString();
+            return Encoding.Default.GetString(ReadValue(offset, size));
         }
 
         public long ReadLong(_DEBUG_TYPED_DATA field)

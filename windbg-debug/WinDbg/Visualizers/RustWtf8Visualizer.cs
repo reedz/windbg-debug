@@ -30,7 +30,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
         {
             var typedData = meta.Entry;
 
-            var bigString = ReadString(typedData.Offset, (uint)Defaults.MaxStringSize);
+            var bigString = _helper.ReadString(typedData.Offset, (uint)Defaults.MaxStringSize);
             var endIndex = bigString.IndexOf('\0');
             string actualString = endIndex == Defaults.NotFound ? $"{bigString}..." : bigString.Substring(0, endIndex);
 

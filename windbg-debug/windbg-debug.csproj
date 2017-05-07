@@ -94,8 +94,10 @@
     <Compile Include="WinDbg\Data\VariableDescription.cs" />
     <Compile Include="WinDbg\DebuggerApi.cs" />
     <Compile Include="WinDbg\DebuggerState.cs" />
+    <Compile Include="WinDbg\Data\DebuggedProcessInfo.cs" />
     <Compile Include="WinDbg\ErrorCodes.cs" />
     <Compile Include="WinDbg\EventCallbacks.cs" />
+    <Compile Include="WinDbg\Helpers\ProcessExtensions.cs" />
     <Compile Include="WinDbg\Helpers\SymbolsExtensions.cs" />
     <Compile Include="WinDbg\HResult.cs" />
     <Compile Include="WinDbg\InputCallbacks.cs" />
