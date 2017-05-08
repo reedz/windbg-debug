@@ -1,14 +1,14 @@
 {
 	"name": "windbg-debug",
-	"displayName": "WinDbg Debug",
-	"version": "0.1.0",
-	"publisher": "dreedz",
+	"displayName": "WinDbg Debugger extension",
+	"version": "0.3.0",
+	"publisher": "reznikdi",
 	"description": "WinDbg-based debug adapter for VS Code.",
 	"author": {
 		"name": "Dmitry Reznik",
 		"email": "hello@reedz.name"
 	},
-
+	"icon": "icon.png",
 	"license": "MIT",
 	"engines": {
 		"vscode": "^1.8.0"

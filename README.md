@@ -10,23 +10,15 @@
 * [Rust](https://www.rust-lang.org) visualizers - extensions to prettify rust-compiled structures output in variables window;
 * Thread / Stackframe switching.
 
-### Installation
-
-Extension is currently not published yet.
-To try it out, please use the following steps:
-
-1. Download or clone github repository;
-2. Open repository root in Visual Studio Code;
-3. Switch to *Debug* panel and run "Extension host" configuration
-
-New VS Code window should open with extension installed. You may now proceed to opening and debugging native windows projects in VS Code.
-
-To install this extension, follow the steps below:
-
-1. Install extension from VS code marketplace: _link pending_
-2. Install "Debugging tools for Windows": [installation guide](https://msdn.microsoft.com/en-us/library/windows/hardware/ff551063(v=vs.85).aspx)
-
 ### Usage
 
+**In order for the extension to work, you need first to have WinDbg installed.**
+To achieve this:
+* Install [debugging tools](https://chocolatey.org/packages/windbg) using chocolatey package manager, or
+* Install [debugging tools](https://msdn.microsoft.com/en-us/library/windows/hardware/ff551063(v=vs.85).aspx) from official source.
 
+After this, the extension is used as any other debugger - by configuring launch.json in Visual Studio Code. For sample configuration, please see [this link](https://github.com/reedz/windbg-debug/blob/master/windbg-debug-tests/test-debuggees/rust/.vscode/launch.json).
 
+### Contribution
+
+As multiple issues will likely be uncovered during extensive use of the extension, everyone willing to help are welcome to contribute. For details on contribution, please see [contribution guide](https://github.com/reedz/windbg-debug/blob/master/CONTRIBUTING.md).
