@@ -36,7 +36,7 @@ namespace windbg_debug_tests
         public void RunAfterTests()
         {
             if (!_hasExited)
-                _api.Terminate();
+                _api.Terminate().Wait();
 
             _debugger.Dispose();
         }
@@ -90,9 +90,9 @@ namespace windbg_debug_tests
             var mainThread = _api.GetCurrentThreads().First();
 
             // Getting into method requires 3 steps, possibly due to internal code organization
-            _api.StepInto();
-            _api.StepInto();
-            _api.StepInto();
+            _api.StepInto().Wait();
+            _api.StepInto().Wait();
+            _api.StepInto().Wait();
             var combinedStackTrace = _api.GetCurrentStackTrace(mainThread.Id);
 
             Assert.IsTrue(combinedStackTrace.Any(x => x.Line == FunctionStartLine && x.FilePath.EndsWith(SourceFileName)));
