@@ -304,3 +304,6 @@ $RECYCLE.BIN/
 
 # Cake-related
 build/**/*
+
+# VS Code extension
+*.vsix
