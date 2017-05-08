@@ -9,9 +9,9 @@
 		"email": "hello@reedz.name"
 	},
 	"icon": "icon.png",
-	"license": "MIT",
+	"license": "LICENSE.md",
 	"engines": {
-		"vscode": "^1.8.0"
+		"vscode": "^1.12.1"
 	},
 	"categories": [
 		"Debuggers"
@@ -30,7 +30,7 @@
 		"vscode": "^1.0.3",
 		"vscode-debugadapter-testsupport": "^1.15.0"
 	},
-	"main": "./windbg-debug/bin/Release/windbg-debug.exe",
+	"main": "./bin/windbg-debug.exe",
 	"activationEvents": [
 		"onCommand:extension.mock-debug.getProgramName",
 		"onCommand:extension.mock-debug.provideInitialConfigurations"
@@ -40,7 +40,7 @@
 			{
 				"type": "windbg",
 				"label": "WinDbg Debug",
-				"program": "./windbg-debug/bin/Release/windbg-debug.exe",
+				"program": "./bin/windbg-debug.exe",
 				"enableBreakpointsFor": {
 					"languageIds": [
 						"c",

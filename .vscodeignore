@@ -1,0 +1,5 @@
+build/**
+src/**
+.gitignore
+.gitattributes
+.appveyor.yml

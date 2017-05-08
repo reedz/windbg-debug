@@ -35,7 +35,7 @@ Task("Build-Debugger")
     .IsDependentOn("Restore-Packages")
     .Does(() => 
     {
-        MSBuild("../windbg-debug.sln", new MSBuildSettings 
+        MSBuild("../src/windbg-debug.sln", new MSBuildSettings 
 		{ 
 			Configuration = "Release", 
 		});
@@ -44,7 +44,7 @@ Task("Build-Debugger")
 Task("Build-Cpp-Debuggee")
     .Does(() =>
     {
-        MSBuild("../windbg-debug-tests/test-debuggees/cpp/src/CppDebuggee.sln",
+        MSBuild("../src/windbg-debug-tests/test-debuggees/cpp/src/CppDebuggee.sln",
         new MSBuildSettings {
             Configuration = "Debug",
             MSBuildPlatform = MSBuildPlatform.x64,   
@@ -57,7 +57,7 @@ Task("Build-Rust-Debuggee")
     {
         using (var process = StartAndReturnProcess(
             rustInstallerPath, 
-            new ProcessSettings { Arguments = "run stable-msvc cargo build", WorkingDirectory = "../windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "run stable-msvc cargo build", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
@@ -80,7 +80,7 @@ Task("Test")
 	.IsDependentOn("Install DbgEng")
 	.Does(() => 
     {
-        NUnit3("../windbg-debug-tests/bin/Release/windbg-debug-tests.dll");
+        NUnit3("../bin/windbg-debug-tests.dll");
     });
 
 RunTarget(target);
