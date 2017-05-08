@@ -27,6 +27,7 @@ namespace WinDbgDebug.WinDbg
         public override void Attach(Response response, dynamic arguments)
         {
             LogStart();
+            InitializeLogging(arguments);
 
             string workingDir = arguments.workingDir;
             if (!string.IsNullOrEmpty(workingDir) && Directory.Exists(workingDir))
@@ -104,6 +105,7 @@ namespace WinDbgDebug.WinDbg
         public override void Launch(Response response, dynamic arguments)
         {
             LogStart();
+            InitializeLogging(arguments);
 
             string workingDir = arguments.workingDir;
             if (!string.IsNullOrEmpty(workingDir) && Directory.Exists(workingDir))
@@ -111,9 +113,7 @@ namespace WinDbgDebug.WinDbg
 
             string target = arguments.target;
             if (string.IsNullOrWhiteSpace(target) || !File.Exists(target))
-            {
                 SendErrorResponse(response, ErrorCodes.TargetDoesNotExist, $"Could not launch '{target}' as it does not exist.");
-            }
 
             string args = arguments.args;
             string debuggerEnginePath = arguments.windbgpath;
@@ -236,6 +236,13 @@ namespace WinDbgDebug.WinDbg
             SendResponse(response, new VariablesResponseBody(result.Select(ToVariable).ToList()));
 
             LogFinish();
+        }
+
+        private static void InitializeLogging(dynamic arguments)
+        {
+            string verbosity = arguments.verbosity;
+            if (!string.IsNullOrWhiteSpace(verbosity))
+                Logging.ChangeVerbosity(verbosity);
         }
 
         private void StopDebugging()

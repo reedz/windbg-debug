@@ -18,8 +18,9 @@ namespace WinDbgDebug
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
+#if DEBUG
             Debugger.Launch();
-
+#endif
             if (!CommandLine.Parser.Default.ParseArguments(args, _options))
             {
                 Console.Error.WriteLine(_options.GetUsage());
@@ -62,6 +63,7 @@ namespace WinDbgDebug
 
         private static void RunServer(int port)
         {
+            _logger.Debug($"Listening on port \"{port}\"");
             TcpListener serverSocket = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
             serverSocket.Start();
 

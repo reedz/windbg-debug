@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using log4net;
 using log4net.Config;
 using log4net.Core;
@@ -21,9 +22,38 @@ namespace WinDbgDebug
 
         public static void Configure(string verbosity)
         {
-            GlobalContext.Properties[_logFilePathPropertyName] = GenerateLogFilePath();
+            var logFilePath = GenerateLogFilePath();
+            GlobalContext.Properties[_logFilePathPropertyName] = logFilePath;
+            SetVerbosity(verbosity);
+            var configFile = ResolveConfigFilePath(_logConfigurationFileName);
+            XmlConfigurator.Configure(configFile);
+
+            var logger = LogManager.GetLogger("Initialize");
+            logger.Info($"Log file location: \"{logFilePath}\"");
+        }
+
+        public static void ChangeVerbosity(string verbosity)
+        {
+            SetVerbosity(verbosity);
+            var configFile = ResolveConfigFilePath(_logConfigurationFileName);
+            XmlConfigurator.Configure(configFile);
+        }
+
+        private static void SetVerbosity(string verbosity)
+        {
             GlobalContext.Properties[_clientLogLevelPropertyName] = ParseLogLevel(verbosity, DefaultClientLogLevel.Name);
-            XmlConfigurator.Configure(new FileInfo(_logConfigurationFileName));
+        }
+
+        private static FileInfo ResolveConfigFilePath(string logConfigurationFileName)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var executingDirectoryPath = Path.GetDirectoryName(assembly.Location);
+
+            Uri codeBaseUri;
+            if (Uri.TryCreate(assembly.CodeBase, UriKind.RelativeOrAbsolute, out codeBaseUri))
+                executingDirectoryPath = Path.GetDirectoryName(codeBaseUri.LocalPath);
+
+            return new FileInfo(Path.Combine(executingDirectoryPath, logConfigurationFileName));
         }
 
         private static string ParseLogLevel(string verbosity, string defaultClientLogLevel)
@@ -34,10 +64,9 @@ namespace WinDbgDebug
 
         private static object GenerateLogFilePath()
         {
-            var randomFile = Path.GetFileNameWithoutExtension(Path.GetRandomFileName());
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
-            return Path.Combine(appData, _applicationName, $"{randomFile}.log");
+            return Path.Combine(appData, _applicationName, $"debug.log");
         }
     }
 }

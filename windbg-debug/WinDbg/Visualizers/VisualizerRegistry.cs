@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using log4net;
 using WinDbgDebug.WinDbg.Data;
 
 namespace WinDbgDebug.WinDbg.Visualizers
 {
     public class VisualizerRegistry
     {
+        private readonly ILog _logger = LogManager.GetLogger(nameof(VisualizerRegistry));
         private readonly List<IVisualizer> _registry = new List<IVisualizer>();
+        private readonly VisualizationResult _defaultResult = new VisualizationResult("<could not identify value>", false);
+        private readonly IReadOnlyDictionary<VariableMetaData, VisualizationResult> _emptyChildren = new ReadOnlyDictionary<VariableMetaData, VisualizationResult>(new Dictionary<VariableMetaData, VisualizationResult>());
 
         public VisualizerRegistry(IVisualizer defaultVisualizer)
         {
@@ -37,35 +42,65 @@ namespace WinDbgDebug.WinDbg.Visualizers
             var handler = _registry.FirstOrDefault(x => x.CanHandle(description)) ?? DefaultVisualizer;
             if (handler != null)
             {
-                result = handler.Handle(description);
-                return true;
+                try
+                {
+                    result = handler.Handle(description);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Error resolving variable '{description.Name}': {ex.Message}", ex);
+                    _logger.Debug("Falling back to default visualizer ..");
+                    try
+                    {
+                        result = DefaultVisualizer.Handle(description);
+                        return true;
+                    }
+                    catch (Exception defaultVisualizerException)
+                    {
+                        _logger.Error($"Default visualizer failed to resolve variable '{description.Name}': {defaultVisualizerException.Message}", defaultVisualizerException);
+                    }
+                }
             }
 
-            result = null;
+            result = _defaultResult;
             return false;
         }
 
         public VisualizationResult Handle(VariableMetaData description)
         {
-            var handler = FindHandler(description);
-            return handler.Handle(description);
+            VisualizationResult result;
+            if (!TryHandle(description, out result))
+            {
+                return _defaultResult;
+            }
+
+            return result;
         }
 
         public IReadOnlyDictionary<VariableMetaData, VisualizationResult> GetChildren(VariableMetaData description)
         {
-            var handler = FindHandler(description);
-            var metas = handler.GetChildren(description);
-
-            var result = new Dictionary<VariableMetaData, VisualizationResult>();
-            if (metas == null)
-                return result;
-
-            foreach (var variable in metas)
+            try
             {
-                result.Add(variable, Handle(variable));
-            }
+                var handler = FindHandler(description);
+                var metas = handler.GetChildren(description);
 
-            return result;
+                var result = new Dictionary<VariableMetaData, VisualizationResult>();
+                if (metas == null)
+                    return result;
+
+                foreach (var variable in metas)
+                {
+                    result.Add(variable, Handle(variable));
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error expanding variable '{description.Name}': {ex.Message}", ex);
+                return _emptyChildren;
+            }
         }
 
         private IVisualizer FindHandler(VariableMetaData description)

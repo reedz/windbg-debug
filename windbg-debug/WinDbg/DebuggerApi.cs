@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using log4net;
 using WinDbgDebug.WinDbg.Data;
 using WinDbgDebug.WinDbg.Messages;
 using WinDbgDebug.WinDbg.Results;
@@ -9,6 +11,7 @@ namespace WinDbgDebug.WinDbg
 {
     public class DebuggerApi
     {
+        private static readonly ILog _logger = LogManager.GetLogger(nameof(DebuggerApi));
         private readonly WinDbgWrapper _wrapper;
         private readonly TimeSpan _timeout;
 
@@ -25,7 +28,10 @@ namespace WinDbgDebug.WinDbg
 
         public string Launch(string path, string arguments)
         {
+            _logger.Info($"Launching application for debugging: {path} {arguments}");
+
             var result = _wrapper.HandleMessage<LaunchMessageResult>(new LaunchMessage(path, arguments), _timeout).Result;
+
             return result.Error;
         }
 
@@ -51,6 +57,10 @@ namespace WinDbgDebug.WinDbg
 
         public IReadOnlyDictionary<Breakpoint, bool> SetBreakpoints(IEnumerable<Breakpoint> breakpoints)
         {
+            _logger.Info($"Setting breakpoints ..");
+            foreach (var breakpoint in breakpoints)
+                _logger.Debug($"\t{breakpoint.File} : #{breakpoint.Line}");
+
             var result = _wrapper.HandleMessage<SetBreakpointsMessageResult>(new SetBreakpointsMessage(breakpoints), _timeout).Result;
 
             return result.BreakpointsSet;
@@ -96,6 +106,8 @@ namespace WinDbgDebug.WinDbg
 
         public Task Terminate()
         {
+            _logger.Info($"Terminating ..");
+
             var result = _wrapper.HandleMessageWithoutResult(new TerminateMessage());
             _wrapper.Interrupt();
 
@@ -109,6 +121,8 @@ namespace WinDbgDebug.WinDbg
 
         public string Attach(int processId)
         {
+            _logger.Info($"Attaching to PID: {processId}");
+
             var result = _wrapper.HandleMessage<AttachMessageResult>(new AttachMessage(processId), _timeout).Result;
 
             return result.Error;
