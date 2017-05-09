@@ -1,148 +1,147 @@
 {
-	"name": "windbg-debug",
-	"displayName": "WinDbg Debugger extension",
-	"version": "0.3.0",
-	"publisher": "reznikdi",
-	"description": "WinDbg-based debug adapter for VS Code.",
-	"author": {
-		"name": "Dmitry Reznik",
-		"email": "hello@reedz.name"
-	},
-	"icon": "icon.png",
-	"license": "LICENSE.md",
-	"engines": {
-		"vscode": "^1.12.1"
-	},
-	"categories": [
-		"Debuggers"
-	],
-	"private": true,
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/reedz/windbg-debug.git"
-	},
-	"bugs": {
-		"url": "https://github.com/reedz/windbg-debug/issues"
-	},
-	"dependencies": {
-	},
-	"devDependencies": {
-		"vscode": "^1.0.3",
-		"vscode-debugadapter-testsupport": "^1.15.0"
-	},
-	"main": "./bin/windbg-debug.exe",
-	"activationEvents": [
-		"onCommand:extension.mock-debug.getProgramName",
-		"onCommand:extension.mock-debug.provideInitialConfigurations"
-	],
-	"contributes": {
-		"debuggers": [
-			{
-				"type": "windbg",
-				"label": "WinDbg Debug",
-				"program": "./bin/windbg-debug.exe",
-				"enableBreakpointsFor": {
-					"languageIds": [
-						"c",
-						"cpp",
-						"rust"
-					]
-				},
-				"variables": {
-					"FileBasenameNoExt": "code-debug.getFileBasenameNoExt",
-					"FileNameNoExt": "code-debug.getFileNameNoExt"
-				},
-				"configurationAttributes": {
-					"launch": {
-						"required": [
-							"target",
-							"windbgpath"
-						],
-						"properties": {
-							"target": {
-								"type": "string",
-								"description": "Path of executable"
-							},
-							"args": {
-								"type": "string",
-								"description": "Arguments passed to the executable."
-							},
-							"windbgpath": {
-								"type": "string",
-								"description": "Path to the dbgeng.dll library",
-								"default": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
-							},
-							"workingDir": {
-								"type": "string",
-								"description": "Current working directory",
-								"default": "${workspaceRoot}"
-							},
-							"verbosity": {
-								"type": "string",
-								"description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
-								"default": "info"
-							}
-						}
-					},
-					"attach": {
-						"required": [
-							"target",
-							"windbgpath"
-						],
-						"properties": {
-							"target": {
-								"type": "string",
-								"description": "PID of running program"
-							},
-							"windbgpath": {
-								"type": "string",
-								"description": "Path to the dbgeng.dll library",
-								"default": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
-							},
-							"workingDir": {
-								"type": "string",
-								"description": "Current working directory",
-								"default": "${workspaceRoot}"
-							},
-							"verbosity": {
-								"type": "string",
-								"description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
-								"default": "info"
-							}
-						}
-					}
-				},
-				"initialConfigurations": [
-					{
-						"name": "Debug",
-						"type": "windbg",
-						"request": "launch",
-						"target": "./bin/executable"
-					}
-				],
-				"configurationSnippets": [
-					{
-						"label": "WinDbg: Launch Program",
-						"description": "Starts the program using windbg",
-						"body": {
-							"type": "windbg",
-							"request": "launch",
-							"name": "${2:Launch Program}",
-							"target": "${1:./bin/executable}"
-						}
-					},
-					{
-						"label": "WinDbg: Attach to PID",
-						"description": "Attaches to a running program pid using windbg",
-						"body": {
-							"type": "windbg",
-							"request": "launch",
-							"name": "${2:Attach to PID}",
-							"target": "${1:[PID]}"
-						}
-					}
-				]
-			}
-		]
-	}
+    "name": "windbg-debug",
+    "displayName": "WinDbg Debugger extension",
+    "version": "0.3.1",
+    "publisher": "reznikdi",
+    "description": "WinDbg-based debug adapter for VS Code.",
+    "author": {
+        "name": "Dmitry Reznik",
+        "email": "hello@reedz.name"
+    },
+    "icon": "icon.png",
+    "license": "LICENSE.md",
+    "engines": {
+        "vscode": "^1.12.1"
+    },
+    "categories": [
+        "Debuggers"
+    ],
+    "private": true,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/reedz/windbg-debug.git"
+    },
+    "bugs": {
+        "url": "https://github.com/reedz/windbg-debug/issues"
+    },
+    "dependencies": {},
+    "devDependencies": {
+        "vscode": "^1.0.3",
+        "vscode-debugadapter-testsupport": "^1.15.0"
+    },
+    "main": "./bin/windbg-debug.exe",
+    "activationEvents": [
+        "onCommand:extension.mock-debug.getProgramName",
+        "onCommand:extension.mock-debug.provideInitialConfigurations"
+    ],
+    "contributes": {
+        "debuggers": [
+            {
+                "type": "windbg",
+                "label": "WinDbg Debug",
+                "program": "./bin/windbg-debug.exe",
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c",
+                        "cpp",
+                        "rust"
+                    ]
+                },
+                "variables": {
+                    "FileBasenameNoExt": "code-debug.getFileBasenameNoExt",
+                    "FileNameNoExt": "code-debug.getFileNameNoExt"
+                },
+                "configurationAttributes": {
+                    "launch": {
+                        "required": [
+                            "target",
+                            "windbgpath"
+                        ],
+                        "properties": {
+                            "target": {
+                                "type": "string",
+                                "description": "Path of executable"
+                            },
+                            "args": {
+                                "type": "string",
+                                "description": "Arguments passed to the executable."
+                            },
+                            "windbgpath": {
+                                "type": "string",
+                                "description": "Path to the dbgeng.dll library",
+                                "default": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
+                            },
+                            "workingDir": {
+                                "type": "string",
+                                "description": "Current working directory",
+                                "default": "${workspaceRoot}"
+                            },
+                            "verbosity": {
+                                "type": "string",
+                                "description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
+                                "default": "info"
+                            }
+                        }
+                    },
+                    "attach": {
+                        "required": [
+                            "target",
+                            "windbgpath"
+                        ],
+                        "properties": {
+                            "target": {
+                                "type": "string",
+                                "description": "PID of running program"
+                            },
+                            "windbgpath": {
+                                "type": "string",
+                                "description": "Path to the dbgeng.dll library",
+                                "default": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
+                            },
+                            "workingDir": {
+                                "type": "string",
+                                "description": "Current working directory",
+                                "default": "${workspaceRoot}"
+                            },
+                            "verbosity": {
+                                "type": "string",
+                                "description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
+                                "default": "info"
+                            }
+                        }
+                    }
+                },
+                "initialConfigurations": [
+                    {
+                        "name": "Debug",
+                        "type": "windbg",
+                        "request": "launch",
+                        "target": "./bin/executable"
+                    }
+                ],
+                "configurationSnippets": [
+                    {
+                        "label": "WinDbg: Launch Program",
+                        "description": "Starts the program using windbg",
+                        "body": {
+                            "type": "windbg",
+                            "request": "launch",
+                            "name": "${2:Launch Program}",
+                            "target": "${1:./bin/executable}"
+                        }
+                    },
+                    {
+                        "label": "WinDbg: Attach to PID",
+                        "description": "Attaches to a running program pid using windbg",
+                        "body": {
+                            "type": "windbg",
+                            "request": "launch",
+                            "name": "${2:Attach to PID}",
+                            "target": "${1:[PID]}"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
 }
