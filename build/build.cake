@@ -12,7 +12,12 @@ Task("Install-Rust")
             | System.Net.SecurityProtocolType.Tls12;
         var client = new System.Net.WebClient();
         client.DownloadFile("https://win.rustup.rs/", rustInstallerPath);
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "default stable-msvc" }))
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-i686-pc-windows-msvc" }))
+        {
+            process.WaitForExit();
+        }
+
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-x86_64-pc-windows-msvc" }))
         {
             process.WaitForExit();
         }
@@ -57,7 +62,14 @@ Task("Build-Rust-Debuggee")
     {
         using (var process = StartAndReturnProcess(
             rustInstallerPath, 
-            new ProcessSettings { Arguments = "run stable-msvc cargo build", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "run stable-x86_64-pc-windows-msvc cargo build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            rustInstallerPath, 
+            new ProcessSettings { Arguments = "run stable-i686-pc-windows-msvc cargo build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
