@@ -6,7 +6,7 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ output extension=".cs" #>
 <#
-	var lines = File.ReadAllLines(Host.ResolvePath("..\\..\\package.json"));
+	var lines = File.ReadAllLines(Host.ResolvePath("..\\..\\..\\package.json"));
 	var versionInfoLine = lines.FirstOrDefault(x => x.Contains("\"version\":"));
 	var versionInfoPair = versionInfoLine.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
 	var versionText = versionInfoPair[1].Trim();
