@@ -8,18 +8,28 @@ using WinDbgDebug.WinDbg;
 namespace windbg_debug_tests
 {
     [TestFixture]
+    [TestFixtureSource(nameof(DebuggeePaths))]
     public class RustDebuggingTests
     {
         private static readonly string SourceFileName = "main.rs";
-        private static readonly string PathToExecutable = Path.Combine(
-            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-            "..\\..\\test-debuggees\\rust\\target\\debug\\debugger_test.exe");
+        private string _pathToExecutable;
         
         private static readonly int PreExitLine = 103;
 
         private bool _hasExited;
         private DebuggerApi _api;
         private WinDbgWrapper _debugger;
+
+        public RustDebuggingTests(string pathToExecutable)
+        {
+            _pathToExecutable = Path.Combine(Const.TestDebuggeesFolder, pathToExecutable);
+        }
+
+        public static object[] DebuggeePaths =
+        {
+            new object[] { "rust\\target\\x86_64-pc-windows-msvc\\debug\\debugger_test.exe" },
+            new object[] { "rust\\target\\i686-pc-windows-msvc\\debug\\debugger_test.exe" },
+        };
 
         [SetUp]
         public void RunBeforeTests()
@@ -45,7 +55,7 @@ namespace windbg_debug_tests
             var hasExited = false;
             _debugger.ProcessExited += (a, b) => hasExited = true;
 
-            var launchResult = _api.Launch(PathToExecutable, string.Empty);
+            var launchResult = _api.Launch(_pathToExecutable, string.Empty);
 
             Assert.IsTrue(string.IsNullOrEmpty(launchResult));
             Assert.That(() => hasExited, Is.True.After(Const.DefaultTimeout, Const.DefaultPollingInterval));
@@ -59,7 +69,7 @@ namespace windbg_debug_tests
             _debugger.BreakpointHit += (breakpoint, threadId) => breakpointHit = true;
             _debugger.ProcessExited += (a, b) => hasExited = true;
 
-            _api.Launch(PathToExecutable, string.Empty);
+            _api.Launch(_pathToExecutable, string.Empty);
             var result = _api.SetBreakpoints(new[] { new Breakpoint(SourceFileName, PreExitLine) });
             Assert.IsTrue(result.Values.All(x => x));
 
@@ -76,7 +86,7 @@ namespace windbg_debug_tests
             var breakpointHit = false;
             _debugger.BreakpointHit += (breakpoint, threadId) => breakpointHit = true;
 
-            _api.Launch(PathToExecutable, string.Empty);
+            _api.Launch(_pathToExecutable, string.Empty);
             var result = _api.SetBreakpoints(new[] { new Breakpoint(SourceFileName, PreExitLine) });
             Assert.IsTrue(result.Values.All(x => x));
 

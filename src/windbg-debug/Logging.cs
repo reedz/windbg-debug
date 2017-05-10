@@ -46,13 +46,7 @@ namespace WinDbgDebug
 
         private static FileInfo ResolveConfigFilePath(string logConfigurationFileName)
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            var executingDirectoryPath = Path.GetDirectoryName(assembly.Location);
-
-            Uri codeBaseUri;
-            if (Uri.TryCreate(assembly.CodeBase, UriKind.RelativeOrAbsolute, out codeBaseUri))
-                executingDirectoryPath = Path.GetDirectoryName(codeBaseUri.LocalPath);
-
+            var executingDirectoryPath = AssemblyHelpers.ResolveAssemblyDirectory(Assembly.GetExecutingAssembly());
             return new FileInfo(Path.Combine(executingDirectoryPath, logConfigurationFileName));
         }
 

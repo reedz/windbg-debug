@@ -12,8 +12,8 @@ namespace windbg_debug_tests
     {
         private static readonly string SourceFileName = "main.cpp";
         private static readonly string PathToExecutable = Path.Combine(
-            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-            "..\\..\\test-debuggees\\cpp\\x64\\Debug\\CppDebuggee.exe");
+            Const.TestDebuggeesFolder,
+            "cpp\\x64\\Debug\\CppDebuggee.exe");
 
         private static readonly int PreExitLine = 33;
         private static readonly int FunctionCallLine = 13;
