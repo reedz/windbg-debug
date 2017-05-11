@@ -100,6 +100,7 @@
     <Compile Include="WinDbg\ErrorCodes.cs" />
     <Compile Include="WinDbg\EventCallbacks.cs" />
     <Compile Include="WinDbg\Helpers\ProcessExtensions.cs" />
+    <Compile Include="WinDbg\Helpers\StringExtensions.cs" />
     <Compile Include="WinDbg\Helpers\SymbolsExtensions.cs" />
     <Compile Include="WinDbg\HResult.cs" />
     <Compile Include="WinDbg\InputCallbacks.cs" />

@@ -691,7 +691,11 @@ namespace WinDbgDebug.WinDbg
 
         private void InitializeSources(string[] sourcePaths)
         {
-            var hr = _symbols.SetSourcePathWide(string.Join(";", sourcePaths.Union(new[] { Environment.CurrentDirectory })));
+            var sourcePathsExpanded = sourcePaths
+                .Union(new[] { Environment.CurrentDirectory })
+                .Select(x => x.ReplaceEnvironmentVariables());
+
+            var hr = _symbols.SetSourcePathWide(string.Join(";", sourcePathsExpanded));
         }
 
         private void InitializeVisualizers()
