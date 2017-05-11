@@ -80,6 +80,13 @@
                                 "type": "string",
                                 "description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
                                 "default": "info"
+                            },
+                            "sources": {
+                                "type": "array",
+                                "description": "Full paths to include for source files lookup",
+                                "default": [ 
+                                    "${workspaceRoot}/src"
+                                    ]
                             }
                         }
                     },
@@ -107,6 +114,13 @@
                                 "type": "string",
                                 "description": "Verbosity of the debugger output: debug, info, warn, error, fatal",
                                 "default": "info"
+                            },
+                            "sources": {
+                                "type": "array",
+                                "description": "Full paths to include for source files lookup",
+                                "default": [ 
+                                    "${workspaceRoot}/src"
+                                    ]
                             }
                         }
                     }
