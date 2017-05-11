@@ -38,9 +38,13 @@ enum SpaceSaver {
     Nothing,
 }
 
+fn func(arg: String) {
+    println!("{}", arg);
+}
+
 fn main () {
     let nothing = ();
-    
+    func("test".to_string());   
     let uint1: u8 = 1;
     let uint2: u16 = 2;
     let uint3: u32 = 3;

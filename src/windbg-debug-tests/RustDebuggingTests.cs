@@ -34,7 +34,7 @@ namespace windbg_debug_tests
         [SetUp]
         public void RunBeforeTests()
         {
-            _debugger = new WinDbgWrapper(Const.PathToEngine);
+            _debugger = new WinDbgWrapper(Const.PathToEngine, null);
             _api = new DebuggerApi(_debugger);
             Environment.CurrentDirectory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "..\\..\\test-debuggees\\cpp\\src");
             _debugger.ProcessExited += (a, b) => _hasExited = true;
