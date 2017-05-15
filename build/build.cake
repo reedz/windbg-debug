@@ -21,6 +21,16 @@ Task("Install-Rust")
         {
             process.WaitForExit();
         }
+
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "component add rust-src" }))
+        {
+            process.WaitForExit();
+        }
+
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc" }))
+        {
+            process.WaitForExit();
+        }
     })
     .OnError(ex => Information(ex.ToString()));
 
