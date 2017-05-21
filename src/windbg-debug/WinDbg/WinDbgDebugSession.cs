@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using log4net;
+using Newtonsoft.Json.Linq;
 using VSCodeDebug;
 using WinDbgDebug.WinDbg.Data;
 using StackFrame = VSCodeDebug.StackFrame;
@@ -41,7 +42,8 @@ namespace WinDbgDebug.WinDbg
             }
 
             string debuggerEnginePath = arguments.windbgpath;
-            InitializeDebugger(arguments, debuggerEnginePath);
+            var sources = ParseSources(arguments);
+            InitializeDebugger(debuggerEnginePath, sources);
 
             var result = _api.Attach(processId);
 
@@ -117,7 +119,9 @@ namespace WinDbgDebug.WinDbg
 
             string args = arguments.args;
             string debuggerEnginePath = arguments.windbgpath;
-            InitializeDebugger(arguments, debuggerEnginePath);
+            string[] sources = ParseSources(arguments);
+
+            InitializeDebugger(debuggerEnginePath, sources);
 
             var result = _api.Launch(target, args);
 
@@ -238,6 +242,15 @@ namespace WinDbgDebug.WinDbg
             LogFinish();
         }
 
+        private static string[] ParseSources(dynamic arguments)
+        {
+            JArray sources = arguments.sources;
+            if (sources == null)
+                return new string[0];
+
+            return sources.Select(x => x.ToString()).ToArray();
+        }
+
         private static void InitializeLogging(dynamic arguments)
         {
             string verbosity = arguments.verbosity;
@@ -263,10 +276,10 @@ namespace WinDbgDebug.WinDbg
             return new VSCodeDebug.Variable(variable.Name, variable.Value, variable.HasChildren ? variable.Id : Defaults.NoChildren);
         }
 
-        private void InitializeDebugger(dynamic arguments, string debuggerEnginePath)
+        private void InitializeDebugger(string debuggerEnginePath, string[] sources)
         {
             Action<string> loggerAction = (text) => SendEvent(new OutputEvent("stdout", text));
-            _wrapper = new WinDbgWrapper(debuggerEnginePath);
+            _wrapper = new WinDbgWrapper(debuggerEnginePath, sources);
             _wrapper.BreakpointHit += OnBreakpoint;
             _wrapper.ExceptionHit += OnException;
             _wrapper.BreakHit += OnBreak;

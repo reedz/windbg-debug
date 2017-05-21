@@ -27,6 +27,7 @@ namespace WinDbgDebug.WinDbg
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
         private readonly object _messagesLock = new object();
+        private readonly string[] _sourcePaths;
 
         private int _lastBreakpointId = 1;
         private bool _isDisposed;
@@ -45,10 +46,12 @@ namespace WinDbgDebug.WinDbg
         private VisualizerRegistry _visualizers;
         private OutputCallbacks _output;
 
-        public WinDbgWrapper(string enginePath)
+        public WinDbgWrapper(string enginePath, string[] sourcePaths)
         {
             if (!string.IsNullOrWhiteSpace(enginePath))
                 NativeMethods.SetDllDirectory(Path.GetDirectoryName(enginePath));
+
+            _sourcePaths = sourcePaths ?? new string[0];
 
             _debuggerThread = new Thread(MainLoop);
             _debuggerThread.Start(_cancel.Token);
@@ -195,7 +198,7 @@ namespace WinDbgDebug.WinDbg
             hr = _control.SetExpressionSyntax(DEBUG_EXPR.CPLUSPLUS);
 
             // Show numbers in decimal system
-            ////hr = _control.SetRadix(10);
+            hr = _control.SetRadix(10);
 
             return hr;
         }
@@ -212,6 +215,7 @@ namespace WinDbgDebug.WinDbg
         private MessageResult DoEndSession()
         {
             _cancel.Cancel();
+            _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
             Terminated?.Invoke(this, null);
             return MessageResult.Empty;
         }
@@ -312,9 +316,11 @@ namespace WinDbgDebug.WinDbg
             int hr = HResult.Ok;
             hr = _symbols.SetSymbolPathWide(Path.GetDirectoryName(fullPath));
 
-            // @TODO: should take source path as a parameter
-            hr = _symbols.SetSourcePathWide(Environment.CurrentDirectory);
+            InitializeSources(_sourcePaths);
+
+            // @TODO: HResult checks ?
             hr = _symbols.Reload(Path.GetFileNameWithoutExtension(fullPath));
+
             ulong handle, offset;
             uint matchSize;
             hr = _symbols.StartSymbolMatch("*", out handle);
@@ -598,13 +604,17 @@ namespace WinDbgDebug.WinDbg
                 uint line, filePathSize;
                 ulong displacement;
                 StringBuilder filePath = new StringBuilder(Defaults.BufferSize);
-                hr = _symbols.GetLineByOffsetWide(frame.InstructionOffset, out line, filePath, Defaults.BufferSize, out filePathSize, out displacement);
+                hr = _symbols.GetLineByOffsetWide(frame.InstructionOffset, out line, filePath, filePath.Capacity, out filePathSize, out displacement);
                 if (hr != HResult.Ok)
                     continue;
 
+                var oldFilePath = filePath.ToString();
+                uint foundElement;
+                hr = _symbols.FindSourceFileWide(0, oldFilePath, DEBUG_FIND_SOURCE.BEST_MATCH | DEBUG_FIND_SOURCE.FULL_PATH, out foundElement, filePath, filePath.Capacity, out filePathSize);
+
                 var indexedFrame = State.AddFrame(
                     threadId,
-                    (id) => new StackTraceFrame(id, frame.InstructionOffset, (int)line, filePath.ToString(), (int)frame.FrameNumber));
+                    (id) => new StackTraceFrame(id, frame.InstructionOffset, (int)line, hr == HResult.Ok ? filePath.ToString() : oldFilePath, (int)frame.FrameNumber));
                 resultFrames.Add(indexedFrame);
             }
 
@@ -660,6 +670,9 @@ namespace WinDbgDebug.WinDbg
             _advanced = _debugger as IDebugAdvanced3;
             _spaces = _debugger as IDebugDataSpaces4;
 
+            // in case previous debugging session hasn't finished correctly
+            // some leftover breakpoints may exist (even if debugging target has changed)
+            _control.ClearBreakpoints();
             _requestHelper = new RequestHelper(_advanced, _spaces, _symbols);
             _commandExecutor = new CommandExecutor(_control);
             _output = new OutputCallbacks();
@@ -678,6 +691,15 @@ namespace WinDbgDebug.WinDbg
 
             _visualizers = new VisualizerRegistry(new DefaultVisualizer(_requestHelper, _symbols, _output));
             InitializeHandlers();
+        }
+
+        private void InitializeSources(string[] sourcePaths)
+        {
+            var sourcePathsExpanded = sourcePaths
+                .Union(SourceHelpers.GetDefaultSourceLocations())
+                .Select(x => x.ReplaceEnvironmentVariables());
+
+            var hr = _symbols.SetSourcePathWide(string.Join(";", sourcePathsExpanded));
         }
 
         private void InitializeVisualizers()
@@ -750,6 +772,7 @@ namespace WinDbgDebug.WinDbg
                     _callbacks.ThreadStarted -= OnThreadStarted;
                     _callbacks.ProcessExited -= OnProcessExited;
 
+                    _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
                     _debugger.SetEventCallbacks(null);
                     _debugger.SetOutputCallbacks(null);
                     _debugger.SetInputCallbacks(null);

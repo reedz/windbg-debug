@@ -1,7 +1,7 @@
 #tool "nuget:?package=NUnit.ConsoleRunner"
 
 var target = Argument("target", "Test");
-var rustInstallerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup.exe");
+var rustInstallerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup-init.exe");
 
 Task("Install-Rust")
     .Does(() => 
@@ -12,12 +12,8 @@ Task("Install-Rust")
             | System.Net.SecurityProtocolType.Tls12;
         var client = new System.Net.WebClient();
         client.DownloadFile("https://win.rustup.rs/", rustInstallerPath);
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-i686-pc-windows-msvc" }))
-        {
-            process.WaitForExit();
-        }
 
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-x86_64-pc-windows-msvc" }))
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "-yv" }))
         {
             process.WaitForExit();
         }
@@ -60,16 +56,45 @@ Task("Build-Rust-Debuggee")
     .IsDependentOn("Install-Rust")
     .Does(() =>
     {
+        Information("Current PATH: {0}", EnvironmentVariable("PATH"));
+        var cargoFiles = GetFiles("%USERPROFILE%/.cargo/bin/*.*");
+        Information("Cargo files:");
+        foreach (var file in cargoFiles)
+        {
+            Information(file);
+        }
+
         using (var process = StartAndReturnProcess(
-            rustInstallerPath, 
-            new ProcessSettings { Arguments = "run stable-x86_64-pc-windows-msvc cargo build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            "rustup.exe", 
+            new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc" }))
             {
                 process.WaitForExit();
             }
 
         using (var process = StartAndReturnProcess(
-            rustInstallerPath, 
-            new ProcessSettings { Arguments = "run stable-i686-pc-windows-msvc cargo build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            "cargo.exe", 
+            new ProcessSettings { Arguments = "build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            "rustup.exe", 
+            new ProcessSettings { Arguments = "default stable-i686-pc-windows-msvc" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            "cargo.exe", 
+            new ProcessSettings { Arguments = "build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            "rustup.exe", 
+            new ProcessSettings { Arguments = "component add rust-src" }))
             {
                 process.WaitForExit();
             }

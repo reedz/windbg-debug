@@ -38,9 +38,12 @@ enum SpaceSaver {
     Nothing,
 }
 
+fn func(arg: String) {
+    println!("{}", arg);
+}
+
 fn main () {
     let nothing = ();
-    
     let uint1: u8 = 1;
     let uint2: u16 = 2;
     let uint3: u32 = 3;
@@ -99,6 +102,8 @@ fn main () {
     let cell_ref_int = RefCell::new(6);
     let rc = Rc::new(5);
     let arc = Arc::new(7);
+
+    func("test".to_string());   
 
     println!("That's all, folks!");
 }

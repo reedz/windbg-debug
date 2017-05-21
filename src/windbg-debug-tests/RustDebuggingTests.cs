@@ -13,7 +13,8 @@ namespace windbg_debug_tests
     {
         private static readonly string SourceFileName = "main.rs";
         private string _pathToExecutable;
-        
+
+        private static readonly int StdCallLine = 106;
         private static readonly int PreExitLine = 103;
 
         private bool _hasExited;
@@ -34,7 +35,7 @@ namespace windbg_debug_tests
         [SetUp]
         public void RunBeforeTests()
         {
-            _debugger = new WinDbgWrapper(Const.PathToEngine);
+            _debugger = new WinDbgWrapper(Const.PathToEngine, null);
             _api = new DebuggerApi(_debugger);
             Environment.CurrentDirectory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "..\\..\\test-debuggees\\cpp\\src");
             _debugger.ProcessExited += (a, b) => _hasExited = true;
@@ -44,7 +45,7 @@ namespace windbg_debug_tests
         public void RunAfterTests()
         {
             if (!_hasExited)
-                _api.Terminate().Wait();
+                _api.Terminate().Wait(Const.DefaultTimeout);
 
             _debugger.Dispose();
         }
@@ -97,6 +98,26 @@ namespace windbg_debug_tests
             var valueItem = locals.Children.First().Children.FirstOrDefault(x => x.CurrentItem.Name == "float");
             Assert.IsNotNull(valueItem);
             StringAssert.Contains("5.5", valueItem.CurrentItem.Value);
+        }
+        
+        [Test]
+        public void StepInto_StdLib_ShouldUseRustSources()
+        {
+            var breakpointHit = false;
+            _debugger.BreakpointHit += (breakpoint, threadId) => breakpointHit = true;
+
+            _api.Launch(_pathToExecutable, string.Empty);
+            var result = _api.SetBreakpoints(new[] { new Breakpoint(SourceFileName, StdCallLine) });
+            Assert.IsTrue(result.Values.All(x => x));
+
+            Assert.That(() => breakpointHit, Is.True.After(Const.DefaultTimeout, Const.DefaultPollingInterval));
+
+            _api.StepInto().Wait(Const.DefaultTimeout);
+            var threads = _api.GetCurrentThreads();
+            var stackTrace = _api.GetCurrentStackTrace(threads.First().Id);
+
+            StringAssert.EndsWith("string.rs", stackTrace.First().FilePath);
+            FileAssert.Exists(stackTrace.First().FilePath);
         }
     }
 }

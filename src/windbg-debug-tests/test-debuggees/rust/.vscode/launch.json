@@ -9,6 +9,10 @@
             ,"verbosity": "debug"
             ,"windbgpath": "C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/dbgeng.dll"
             ,"workingDir": "${workspaceRoot}"
+            ,"sources": [ 
+                "${workspaceRoot}/src"
+                //,"%RUST_SRC_PATH%" 
+                ]
         }
     ]
 }
