@@ -36,7 +36,7 @@ namespace windbg_debug_tests
         public void RunAfterTests()
         {
             if (!_hasExited)
-                _api.Terminate().Wait();
+                _api.Terminate().Wait(Const.DefaultTimeout);
 
             _debugger.Dispose();
         }

@@ -99,6 +99,7 @@
     <Compile Include="WinDbg\Data\DebuggedProcessInfo.cs" />
     <Compile Include="WinDbg\ErrorCodes.cs" />
     <Compile Include="WinDbg\EventCallbacks.cs" />
+    <Compile Include="WinDbg\Helpers\DebugControlExtensions.cs" />
     <Compile Include="WinDbg\Helpers\ProcessExtensions.cs" />
     <Compile Include="WinDbg\Helpers\SourceHelpers.cs" />
     <Compile Include="WinDbg\Helpers\StringExtensions.cs" />

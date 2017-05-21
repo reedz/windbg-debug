@@ -215,6 +215,7 @@ namespace WinDbgDebug.WinDbg
         private MessageResult DoEndSession()
         {
             _cancel.Cancel();
+            _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
             Terminated?.Invoke(this, null);
             return MessageResult.Empty;
         }
@@ -669,6 +670,9 @@ namespace WinDbgDebug.WinDbg
             _advanced = _debugger as IDebugAdvanced3;
             _spaces = _debugger as IDebugDataSpaces4;
 
+            // in case previous debugging session hasn't finished correctly
+            // some leftover breakpoints may exist (even if debugging target has changed)
+            _control.ClearBreakpoints();
             _requestHelper = new RequestHelper(_advanced, _spaces, _symbols);
             _commandExecutor = new CommandExecutor(_control);
             _output = new OutputCallbacks();
@@ -768,6 +772,7 @@ namespace WinDbgDebug.WinDbg
                     _callbacks.ThreadStarted -= OnThreadStarted;
                     _callbacks.ProcessExited -= OnProcessExited;
 
+                    _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
                     _debugger.SetEventCallbacks(null);
                     _debugger.SetOutputCallbacks(null);
                     _debugger.SetInputCallbacks(null);
