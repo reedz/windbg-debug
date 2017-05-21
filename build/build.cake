@@ -72,8 +72,22 @@ Task("Build-Rust-Debuggee")
             }
 
         using (var process = StartAndReturnProcess(
+            "rustup.exe", 
+            new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
             "cargo.exe", 
             new ProcessSettings { Arguments = "build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            "rustup.exe", 
+            new ProcessSettings { Arguments = "default stable-i686-pc-windows-msvc" }))
             {
                 process.WaitForExit();
             }
