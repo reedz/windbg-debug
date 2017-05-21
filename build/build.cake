@@ -12,24 +12,8 @@ Task("Install-Rust")
             | System.Net.SecurityProtocolType.Tls12;
         var client = new System.Net.WebClient();
         client.DownloadFile("https://win.rustup.rs/", rustInstallerPath);
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "-v install stable-i686-pc-windows-msvc" }))
-        {
-            process.WaitForExit();
-        }
 
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "-v install stable-x86_64-pc-windows-msvc" }))
-        {
-            process.WaitForExit();
-        }
-
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "-v which rustc", RedirectStandardOutput = true }))
-        {
-            process.WaitForExit();
-            var output = process.GetStandardOutput().FirstOrDefault();
-            Information("Rustc path: {0}", output);
-        }
-
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "-v component add rust-src" }))
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "-yv" }))
         {
             process.WaitForExit();
         }
