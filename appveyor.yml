@@ -1,6 +1,11 @@
 version: 1.0.{build}
 image: Visual Studio 2015
 
+environment:
+  RUSTUP_HOME: ./rustup
+  CARGO_HOME: ./cargo
+  PATH: '%PATH%;%RUSTUP_HOME%;%CARGO_HOME%;'
+
 build_script:
 - ps: ./build/build.ps1 -target Build
 
