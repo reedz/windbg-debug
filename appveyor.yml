@@ -3,6 +3,9 @@ image: Visual Studio 2015
 init:
 - ps: $env:Path += Join-Path $env:USERPROFILE ".cargo/bin"
 
+before_build:
+- ps: Write-Host $env:Path
+
 build_script:
 - ps: ./build/build.ps1 -target Build
 
