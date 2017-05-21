@@ -2,6 +2,8 @@ version: 1.0.{build}
 image: Visual Studio 2015
 init:
 - ps: $env:Path += ";" + (Join-Path $env:USERPROFILE ".cargo/bin")
+- ps: $env:RUSTUP_HOME = (Join-Path $env:USERPROFILE ".rustup")
+- ps: $env:CARGO_HOME = (Join-Path $env:USERPROFILE ".cargo")
 
 before_build:
 - ps: Write-Host $env:Path
