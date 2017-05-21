@@ -1,11 +1,9 @@
 version: 1.0.{build}
 image: Visual Studio 2015
 init:
-- ps: >-
-    $current_folder = $pwd.Path
-    $env:RUSTUP_HOME = Join-Path $current_folder "rustup"
-    $env:CARGO_HOME = Join-Path $current_folder "cargo"
-    $env:Path += Join-Path $current_folder "cargo/bin"
+- ps: $env:RUSTUP_HOME = Join-Path $pwd.Path "rustup"
+- ps: $env:CARGO_HOME = Join-Path $current_folder "cargo"
+- ps: $env:Path += Join-Path $current_folder "cargo/bin"
 
 build_script:
 - ps: ./build/build.ps1 -target Build
