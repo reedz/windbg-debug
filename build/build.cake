@@ -12,12 +12,12 @@ Task("Install-Rust")
             | System.Net.SecurityProtocolType.Tls12;
         var client = new System.Net.WebClient();
         client.DownloadFile("https://win.rustup.rs/", rustInstallerPath);
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-i686-pc-windows-msvc" }))
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-i686-pc-windows-msvc -v" }))
         {
             process.WaitForExit();
         }
 
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-x86_64-pc-windows-msvc" }))
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "install stable-x86_64-pc-windows-msvc -v" }))
         {
             process.WaitForExit();
         }
@@ -82,28 +82,28 @@ Task("Build-Rust-Debuggee")
 
         using (var process = StartAndReturnProcess(
             rustInstallerPath, 
-            new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc -v", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
 
         using (var process = StartAndReturnProcess(
             "cargo", 
-            new ProcessSettings { Arguments = "build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "build --target x86_64-pc-windows-msvc -v", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
 
         using (var process = StartAndReturnProcess(
             rustInstallerPath, 
-            new ProcessSettings { Arguments = "default stable-i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "default stable-i686-pc-windows-msvc -v", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
 
         using (var process = StartAndReturnProcess(
             "cargo", 
-            new ProcessSettings { Arguments = "build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "build --target i686-pc-windows-msvc -v", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
