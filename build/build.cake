@@ -1,7 +1,7 @@
 #tool "nuget:?package=NUnit.ConsoleRunner"
 
 var target = Argument("target", "Test");
-var rustInstallerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup.exe");
+var rustInstallerPath = System.IO.Path.Combine(Environment.CurrentDirectory, "rustup-init.exe");
 
 Task("Install-Rust")
     .Does(() => 
