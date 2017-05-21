@@ -22,6 +22,13 @@ Task("Install-Rust")
             process.WaitForExit();
         }
 
+        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "which rustc", RedirectStandardOutput = true }))
+        {
+            process.WaitForExit();
+            var output = process.GetStandardOutput().FirstOrDefault();
+            Information("Rustc path: {0}", output);
+        }
+
         using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "component add rust-src" }))
         {
             process.WaitForExit();
