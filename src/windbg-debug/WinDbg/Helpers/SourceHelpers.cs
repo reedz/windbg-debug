@@ -35,7 +35,7 @@ namespace WinDbgDebug.WinDbg.Helpers
 
         private static string GetRustDefaultSourceLocation()
         {
-            const string addendum = "lib/rustlib/src/rust/src";
+            const string addendum = "lib\\rustlib\\src\\rust\\src";
             var startInfo = new ProcessStartInfo
             {
                 Arguments = "--print sysroot",

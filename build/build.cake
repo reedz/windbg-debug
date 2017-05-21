@@ -66,13 +66,6 @@ Task("Build-Rust-Debuggee")
 
         using (var process = StartAndReturnProcess(
             "rustup.exe", 
-            new ProcessSettings { Arguments = "component add rust-src" }))
-            {
-                process.WaitForExit();
-            }
-
-        using (var process = StartAndReturnProcess(
-            "rustup.exe", 
             new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc" }))
             {
                 process.WaitForExit();
@@ -95,6 +88,13 @@ Task("Build-Rust-Debuggee")
         using (var process = StartAndReturnProcess(
             "cargo.exe", 
             new ProcessSettings { Arguments = "build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            "rustup.exe", 
+            new ProcessSettings { Arguments = "component add rust-src" }))
             {
                 process.WaitForExit();
             }
