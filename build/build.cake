@@ -65,29 +65,22 @@ Task("Build-Rust-Debuggee")
         }
 
         using (var process = StartAndReturnProcess(
-            rustInstallerPath, 
-            new ProcessSettings { Arguments = "-v default stable-x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            "rustup.exe", 
+            new ProcessSettings { Arguments = "component add rust-src" }))
             {
                 process.WaitForExit();
             }
 
         using (var process = StartAndReturnProcess(
             "cargo.exe", 
-            new ProcessSettings { Arguments = "-v build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
-            {
-                process.WaitForExit();
-            }
-
-        using (var process = StartAndReturnProcess(
-            rustInstallerPath, 
-            new ProcessSettings { Arguments = "-v default stable-i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
 
         using (var process = StartAndReturnProcess(
             "cargo.exe", 
-            new ProcessSettings { Arguments = "-v build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
