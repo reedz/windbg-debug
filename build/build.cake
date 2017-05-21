@@ -65,6 +65,14 @@ Task("Build-Rust-Debuggee")
     .IsDependentOn("Install-Rust")
     .Does(() =>
     {
+        Information("Current PATH: {0}", EnvironmentVariable("PATH"));
+        var cargoFiles = GetFiles("%USERPROFILE%/.cargo/bin/*.*");
+        Information("Cargo files:");
+        foreach (var file in cargoFiles)
+        {
+            Information(file);
+        }
+
         using (var process = StartAndReturnProcess(
             rustInstallerPath, 
             new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
