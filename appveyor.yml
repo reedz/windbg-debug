@@ -5,6 +5,8 @@ init:
 
 before_build:
 - ps: Write-Host $env:Path
+- ps: Write-Host $env:RUSTUP_HOME
+- ps: Write-Host $env:CARGO_HOME
 
 build_script:
 - ps: ./build/build.ps1 -target Build
