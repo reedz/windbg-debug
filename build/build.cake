@@ -26,11 +26,6 @@ Task("Install-Rust")
         {
             process.WaitForExit();
         }
-
-        using (var process = StartAndReturnProcess(rustInstallerPath, new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc" }))
-        {
-            process.WaitForExit();
-        }
     })
     .OnError(ex => Information(ex.ToString()));
 
@@ -72,14 +67,28 @@ Task("Build-Rust-Debuggee")
     {
         using (var process = StartAndReturnProcess(
             rustInstallerPath, 
-            new ProcessSettings { Arguments = "run stable-x86_64-pc-windows-msvc cargo build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "default stable-x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            "cargo", 
+            new ProcessSettings { Arguments = "build --target x86_64-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
 
         using (var process = StartAndReturnProcess(
             rustInstallerPath, 
-            new ProcessSettings { Arguments = "run stable-i686-pc-windows-msvc cargo build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            new ProcessSettings { Arguments = "default stable-i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
+            {
+                process.WaitForExit();
+            }
+
+        using (var process = StartAndReturnProcess(
+            "cargo", 
+            new ProcessSettings { Arguments = "build --target i686-pc-windows-msvc", WorkingDirectory = "../src/windbg-debug-tests/test-debuggees/rust/" }))
             {
                 process.WaitForExit();
             }
