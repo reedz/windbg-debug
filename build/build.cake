@@ -114,7 +114,7 @@ Task("Install DbgEng")
 	
 Task("Test")
 	.IsDependentOn("Build")
-	.IsDependentOn("Install DbgEng")
+//	.IsDependentOn("Install DbgEng")
 	.Does(() => 
     {
         NUnit3("../bin/windbg-debug-tests.dll");

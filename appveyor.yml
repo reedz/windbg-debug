@@ -12,6 +12,3 @@ before_build:
 
 build_script:
 - ps: ./build/build.ps1 -target Build
-
-before_test:
-- ps: ./build/build.ps1 -Target "Install DbgEng"
