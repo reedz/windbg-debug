@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using WinDbgDebug.WinDbg;
+using WinDbgDebug.WinDbg.Helpers;
 
 namespace windbg_debug_tests
 {
@@ -14,8 +15,9 @@ namespace windbg_debug_tests
         private static readonly string SourceFileName = "main.rs";
         private string _pathToExecutable;
 
-        private static readonly int StdCallLine = 106;
-        private static readonly int PreExitLine = 103;
+        private static readonly int StdCallLine = 104;
+        private static readonly int PreExitLine = 102;
+        private static readonly int StringDecodeLine = 109;
 
         private bool _hasExited;
         private DebuggerApi _api;
@@ -118,6 +120,28 @@ namespace windbg_debug_tests
 
             StringAssert.EndsWith("string.rs", stackTrace.First().FilePath);
             FileAssert.Exists(stackTrace.First().FilePath);
+        }
+
+        [Test]
+        public void Run_FileWithDynamicStrings_DecodesStringsCorrectly()
+        {
+            const string variableName = "arg";
+            const string variableValue = "test";
+
+            var breakpointHit = false;
+            _debugger.BreakpointHit += (breakpoint, threadId) => breakpointHit = true;
+
+            _api.Launch(_pathToExecutable, string.Empty);
+            var result = _api.SetBreakpoints(new[] { new Breakpoint(SourceFileName, StringDecodeLine) });
+            Assert.IsTrue(result.Values.All(x => x));
+
+            Assert.That(() => breakpointHit, Is.True.After(Const.DefaultTimeout, Const.DefaultPollingInterval));
+
+            var locals = _api.GetAllLocals();
+            var stringArgument = locals.Children[0].Children.FirstOrDefault(x => x.CurrentItem.Name == variableName);
+
+            Assert.IsNotNull(stringArgument);
+            Assert.AreEqual(variableValue.WithQuotes(), stringArgument.CurrentItem.Value);
         }
     }
 }

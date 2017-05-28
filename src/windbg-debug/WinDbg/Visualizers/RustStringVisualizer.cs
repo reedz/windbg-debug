@@ -12,6 +12,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
         private static readonly string _stringTypeName = "struct &str";
         private static readonly string _dynamicStringTypeName = "string::String";
         private static readonly string _shortStringName = "&str";
+        private static readonly char _pointer = '*';
         private readonly DebuggedProcessInfo _metaData;
 
         public RustStringVisualizer(RequestHelper helper, IDebugSymbols4 symbols, DebuggedProcessInfo metaData)
@@ -24,7 +25,8 @@ namespace WinDbgDebug.WinDbg.Visualizers
         {
             return string.Equals(meta.TypeName, _stringTypeName, StringComparison.OrdinalIgnoreCase)
                 || meta.TypeName.Contains(_dynamicStringTypeName)
-                || string.Equals(meta.TypeName, _shortStringName, StringComparison.OrdinalIgnoreCase);
+                || string.Equals(meta.TypeName, _shortStringName, StringComparison.OrdinalIgnoreCase)
+                || meta.TypeName.EndsWith($"{_dynamicStringTypeName} *");
         }
 
         public override VisualizationResult Handle(VariableMetaData meta)
@@ -35,17 +37,15 @@ namespace WinDbgDebug.WinDbg.Visualizers
             if (meta.TypeName.EndsWith(_dynamicStringTypeName))
                 return ReadPointerString(meta);
 
+            if (meta.TypeName.EndsWith(_pointer.ToString()))
+                return ReadPointerString(meta);
+
             return ReadStaticString(meta);
         }
 
         public override IEnumerable<VariableMetaData> GetChildren(VariableMetaData meta)
         {
             return Enumerable.Empty<VariableMetaData>();
-        }
-
-        private static string Enquote(string actualString)
-        {
-            return $"\"{actualString}\"";
         }
 
         private VisualizationResult ReadStaticString(VariableMetaData meta)
@@ -55,7 +55,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             string actualString = ReadString(variableRead, stringLength);
 
-            return new VisualizationResult(Enquote(actualString), false);
+            return new VisualizationResult(actualString.WithQuotes(), false);
         }
 
         private string ReadString(TypedVariable stringContainer, ulong stringLength)
@@ -75,7 +75,7 @@ namespace WinDbgDebug.WinDbg.Visualizers
 
             var actualString = ReadString(stringContainer, stringLength);
 
-            return new VisualizationResult(Enquote(actualString), false);
+            return new VisualizationResult(actualString.WithQuotes(), false);
         }
     }
 }

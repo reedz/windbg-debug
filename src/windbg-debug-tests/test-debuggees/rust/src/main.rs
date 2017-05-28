@@ -38,10 +38,6 @@ enum SpaceSaver {
     Nothing,
 }
 
-fn func(arg: String) {
-    println!("{}", arg);
-}
-
 fn main () {
     let nothing = ();
     let uint1: u8 = 1;
@@ -103,7 +99,16 @@ fn main () {
     let rc = Rc::new(5);
     let arc = Arc::new(7);
 
-    func("test".to_string());   
-
     println!("That's all, folks!");
+
+    test_string_pointer(&"test".to_string());   
+    test_int_pointer(&int3);
+}
+
+fn test_string_pointer(arg: &String) {
+    println!("{}", arg);
+}
+
+fn test_int_pointer(arg: &i32) {
+    println!("{}", arg);
 }

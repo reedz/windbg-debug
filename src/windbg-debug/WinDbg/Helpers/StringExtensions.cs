@@ -44,6 +44,11 @@ namespace WinDbgDebug.WinDbg.Helpers
             return path;
         }
 
+        public static string WithQuotes(this string actualString)
+        {
+            return $"\"{actualString}\"";
+        }
+
         private static Dictionary<string, string> ReadEnvironmentVariablesSafely()
         {
             var result = new Dictionary<string, string>();
