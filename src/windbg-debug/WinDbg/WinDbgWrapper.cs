@@ -822,20 +822,29 @@ namespace WinDbgDebug.WinDbg
                 {
                     _cancel.Cancel();
 
-                    _debuggerThread.Join(TimeSpan.FromMilliseconds(100));
-                    _callbacks.BreakpointHit -= OnBreakpoint;
-                    _callbacks.ExceptionHit -= OnException;
-                    _callbacks.BreakHappened -= OnBreak;
-                    _callbacks.ThreadFinished -= OnThreadFinished;
-                    _callbacks.ThreadStarted -= OnThreadStarted;
-                    _callbacks.ProcessExited -= OnProcessExited;
+                    if (_debuggerThread != null)
+                        _debuggerThread.Join(TimeSpan.FromMilliseconds(100));
 
-                    _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
-                    _debugger.SetEventCallbacks(null);
-                    _debugger.SetOutputCallbacks(null);
-                    _debugger.SetInputCallbacks(null);
+                    if (_callbacks != null)
+                    {
+                        _callbacks.BreakpointHit -= OnBreakpoint;
+                        _callbacks.ExceptionHit -= OnException;
+                        _callbacks.BreakHappened -= OnBreak;
+                        _callbacks.ThreadFinished -= OnThreadFinished;
+                        _callbacks.ThreadStarted -= OnThreadStarted;
+                        _callbacks.ProcessExited -= OnProcessExited;
+                    }
+
+                    if (_debugger != null)
+                    {
+                        _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
+                        _debugger.SetEventCallbacks(null);
+                        _debugger.SetOutputCallbacks(null);
+                        _debugger.SetInputCallbacks(null);
+                    }
 
                     _callbacks = null;
+                    _debugger = null;
 
                     _messages.Dispose();
                 }
