@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using WinDbgDebug.WinDbg;
+using WinDbgDebug.WinDbg.Data;
 
 namespace windbg_debug_tests
 {
@@ -26,7 +27,13 @@ namespace windbg_debug_tests
         [SetUp]
         public void RunBeforeTests()
         {
-            _debugger = new WinDbgWrapper(Const.PathToEngine, null);
+            InitializeDebugger();
+        }
+
+        private void InitializeDebugger(string[] symbolsPath = null)
+        {
+            var options = new WinDbgOptions(Const.PathToEngine, null, symbolsPath);
+            _debugger = new WinDbgWrapper(options);
             _api = new DebuggerApi(_debugger);
             Environment.CurrentDirectory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "..\\..\\test-debuggees\\cpp\\src");
             _debugger.ProcessExited += (a, b) => _hasExited = true;
@@ -119,6 +126,29 @@ namespace windbg_debug_tests
             var valueItem = locals.Children.First().Children.FirstOrDefault(x => x.CurrentItem.Name == "value");
             Assert.IsNotNull(valueItem);
             StringAssert.Contains("128", valueItem.CurrentItem.Value);
+        }
+
+        [Test]
+        public void Run_FileHasPdbInSeparateFolder_ShouldLoadPdb()
+        {
+            _debugger.Dispose();
+
+            var pdbFolder = Path.GetDirectoryName(PathToExecutable);
+            var executableFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()));
+            var executablePath = Path.Combine(executableFolder.FullName, Path.GetFileName(PathToExecutable));
+            File.Copy(PathToExecutable, executablePath);
+
+            InitializeDebugger(new[] { pdbFolder });
+
+            _api.Launch(executablePath, string.Empty);
+
+            var breakpointHit = false;
+            _debugger.BreakpointHit += (breakpoint, threadId) => breakpointHit = true;
+
+            var result = _api.SetBreakpoints(new[] { new Breakpoint(SourceFileName, PreExitLine) });
+            Assert.IsTrue(result.Values.All(x => x));
+
+            Assert.That(() => breakpointHit, Is.True.After(Const.DefaultTimeout, Const.DefaultPollingInterval));
         }
     }
 }

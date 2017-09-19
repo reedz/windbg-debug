@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using WinDbgDebug.WinDbg;
+using WinDbgDebug.WinDbg.Data;
 using WinDbgDebug.WinDbg.Helpers;
 
 namespace windbg_debug_tests
@@ -37,9 +38,15 @@ namespace windbg_debug_tests
         [SetUp]
         public void RunBeforeTests()
         {
-            _debugger = new WinDbgWrapper(Const.PathToEngine, null);
+            InitializeDebugger();
+        }
+
+        private void InitializeDebugger(string[] symbolsPath = null)
+        {
+            var options = new WinDbgOptions(Const.PathToEngine, null, symbolsPath);
+            _debugger = new WinDbgWrapper(options);
             _api = new DebuggerApi(_debugger);
-            Environment.CurrentDirectory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "..\\..\\test-debuggees\\cpp\\src");
+            Environment.CurrentDirectory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "..\\..\\test-debuggees\\rust\\src");
             _debugger.ProcessExited += (a, b) => _hasExited = true;
         }
 

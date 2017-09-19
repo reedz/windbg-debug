@@ -121,6 +121,11 @@
                                 "default": [ 
                                     "${workspaceRoot}/src"
                                     ]
+                            },
+                            "symbols": {
+                                "type": "array",
+                                "description": "Full paths to symbols (pdbs)",
+                                "default": []
                             }
                         }
                     }
