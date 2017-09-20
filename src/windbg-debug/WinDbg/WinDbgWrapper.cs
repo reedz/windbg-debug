@@ -844,13 +844,14 @@ namespace WinDbgDebug.WinDbg
                     }
 
                     _callbacks = null;
-                    _debugger = null;
-
                     _messages.Dispose();
                 }
 
-                while (Marshal.ReleaseComObject(_debugger) > 0)
+                if (_debugger != null)
                 {
+                    while (Marshal.ReleaseComObject(_debugger) > 0)
+                    {
+                    }
                 }
 
                 _debugger = null;
