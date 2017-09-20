@@ -27,7 +27,7 @@ namespace WinDbgDebug.WinDbg
         private readonly Thread _debuggerThread;
         private readonly BlockingCollection<MessageRecord> _messages = new BlockingCollection<MessageRecord>();
         private readonly object _messagesLock = new object();
-        private readonly string[] _sourcePaths;
+        private readonly WinDbgOptions _options;
 
         private int _lastBreakpointId = 1;
         private bool _isDisposed;
@@ -46,12 +46,15 @@ namespace WinDbgDebug.WinDbg
         private VisualizerRegistry _visualizers;
         private OutputCallbacks _output;
 
-        public WinDbgWrapper(string enginePath, string[] sourcePaths)
+        public WinDbgWrapper(WinDbgOptions options)
         {
-            if (!string.IsNullOrWhiteSpace(enginePath))
-                NativeMethods.SetDllDirectory(Path.GetDirectoryName(enginePath));
+            if (options == null)
+                throw new ArgumentNullException(nameof(options));
 
-            _sourcePaths = sourcePaths ?? new string[0];
+            if (!string.IsNullOrWhiteSpace(options.EnginePath))
+                NativeMethods.SetDllDirectory(Path.GetDirectoryName(options.EnginePath));
+
+            _options = options;
 
             _debuggerThread = new Thread(MainLoop);
             _debuggerThread.Start(_cancel.Token);
@@ -179,14 +182,37 @@ namespace WinDbgDebug.WinDbg
             if (process == null)
                 return new AttachMessageResult($"Error reading process info.");
 
-            hr = ForceLoadSymbols(process.StartInfo.FileName);
+            hr = InitializeSources(_options.SourcePaths);
+            if (hr != HResult.Ok)
+                return new AttachMessageResult($"Error setting source paths: {hr.ToString("X8")}");
+
+            var moduleName = GetModuleName(out hr);
+            if (hr != HResult.Ok)
+                return new AttachMessageResult($"Error reading main module name: {hr.ToString("X8")}");
+
+            hr = InitializeSymbols(process.StartInfo.FileName, _options.SymbolPaths);
+            if (hr != HResult.Ok)
+                return new AttachMessageResult($"Error setting symbol paths: {hr.ToString("X8")}");
+
+            hr = ForceLoadSymbols(moduleName);
             if (hr != HResult.Ok)
                 return new AttachMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
 
             SetDebugSettings();
-            PostInitialize();
+            CreateProcessInfo((uint)message.ProcessId);
+            InitializeVisualizers();
 
             return new AttachMessageResult();
+        }
+
+        private int InitializeSymbols(string filePath, string[] symbolPaths)
+        {
+            var paths = new[] { Path.GetFullPath(Path.GetDirectoryName(filePath)) }
+                .Union(symbolPaths.Select(Path.GetFullPath))
+                .Distinct()
+                .ToArray();
+
+            return _symbols.SetSymbolPathWide(string.Join(";", paths));
         }
 
         private int SetDebugSettings()
@@ -291,35 +317,50 @@ namespace WinDbgDebug.WinDbg
             if (hr != HResult.Ok)
                 return new LaunchMessageResult($"Error attaching debugger: {hr.ToString("X8")}");
 
-            hr = ForceLoadSymbols(message.FullPath);
+            InitializeProcessInfo();
+
+            hr = InitializeSources(_options.SourcePaths);
+            if (hr != HResult.Ok)
+                return new LaunchMessageResult($"Error setting source paths: {hr.ToString("X8")}");
+
+            var moduleName = GetModuleName(out hr);
+            if (hr != HResult.Ok)
+                return new LaunchMessageResult($"Error reading main module name: {hr.ToString("X8")}");
+
+            hr = InitializeSymbols(message.FullPath, _options.SymbolPaths);
+            if (hr != HResult.Ok)
+                return new LaunchMessageResult($"Error setting symbol paths: {hr.ToString("X8")}");
+
+            hr = ForceLoadSymbols(moduleName);
             if (hr != HResult.Ok)
                 return new LaunchMessageResult($"Error loading debug symbols: {hr.ToString("X8")}");
 
             SetDebugSettings();
-            PostInitialize();
+            InitializeVisualizers();
 
             return new LaunchMessageResult();
         }
 
-        private void PostInitialize()
+        private string GetModuleNameByFileName(string fullPath)
+        {
+            return Path.GetFileNameWithoutExtension(fullPath);
+        }
+
+        private void InitializeProcessInfo()
         {
             uint systemId;
             var hr = _systemObjects.GetCurrentProcessSystemId(out systemId);
             if (hr == HResult.Ok)
                 CreateProcessInfo(systemId);
-
-            InitializeVisualizers();
         }
 
-        private int ForceLoadSymbols(string fullPath)
+        private int ForceLoadSymbols(string moduleName)
         {
-            int hr = HResult.Ok;
-            hr = _symbols.SetSymbolPathWide(Path.GetDirectoryName(fullPath));
+            var hr = HResult.Ok;
 
-            InitializeSources(_sourcePaths);
-
-            // @TODO: HResult checks ?
-            hr = _symbols.Reload(Path.GetFileNameWithoutExtension(fullPath));
+            hr = _symbols.ReloadWide(moduleName);
+            if (hr != HResult.Ok)
+                return hr;
 
             ulong handle, offset;
             uint matchSize;
@@ -328,6 +369,23 @@ namespace WinDbgDebug.WinDbg
             hr = _symbols.GetNextSymbolMatch(handle, name, Defaults.BufferSize, out matchSize, out offset);
             hr = _symbols.EndSymbolMatch(handle);
             return hr;
+        }
+
+        private string GetModuleName(out int hresult)
+        {
+            ulong moduleBase;
+            hresult = _symbols.GetModuleByIndex(0, out moduleBase);
+            if (hresult != HResult.Ok)
+                return string.Empty;
+
+            StringBuilder moduleName = new StringBuilder(Defaults.BufferSize);
+            uint nameSize;
+            DEBUG_MODNAME nameType = DEBUG_MODNAME.IMAGE;
+            hresult = _symbols.GetModuleNameString(nameType, 0, moduleBase, moduleName, (uint)Defaults.BufferSize, out nameSize);
+            if (hresult != HResult.Ok)
+                return string.Empty;
+
+            return moduleName.ToString();
         }
 
         private MessageResult DoSetBreakpoints(SetBreakpointsMessage message)
@@ -693,13 +751,13 @@ namespace WinDbgDebug.WinDbg
             InitializeHandlers();
         }
 
-        private void InitializeSources(string[] sourcePaths)
+        private int InitializeSources(string[] sourcePaths)
         {
             var sourcePathsExpanded = sourcePaths
                 .Union(SourceHelpers.GetDefaultSourceLocations())
                 .Select(x => x.ReplaceEnvironmentVariables());
 
-            var hr = _symbols.SetSourcePathWide(string.Join(";", sourcePathsExpanded));
+            return _symbols.SetSourcePathWide(string.Join(";", sourcePathsExpanded));
         }
 
         private void InitializeVisualizers()
@@ -764,26 +822,36 @@ namespace WinDbgDebug.WinDbg
                 {
                     _cancel.Cancel();
 
-                    _debuggerThread.Join(TimeSpan.FromMilliseconds(100));
-                    _callbacks.BreakpointHit -= OnBreakpoint;
-                    _callbacks.ExceptionHit -= OnException;
-                    _callbacks.BreakHappened -= OnBreak;
-                    _callbacks.ThreadFinished -= OnThreadFinished;
-                    _callbacks.ThreadStarted -= OnThreadStarted;
-                    _callbacks.ProcessExited -= OnProcessExited;
+                    if (_debuggerThread != null)
+                        _debuggerThread.Join(TimeSpan.FromMilliseconds(100));
 
-                    _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
-                    _debugger.SetEventCallbacks(null);
-                    _debugger.SetOutputCallbacks(null);
-                    _debugger.SetInputCallbacks(null);
+                    if (_callbacks != null)
+                    {
+                        _callbacks.BreakpointHit -= OnBreakpoint;
+                        _callbacks.ExceptionHit -= OnException;
+                        _callbacks.BreakHappened -= OnBreak;
+                        _callbacks.ThreadFinished -= OnThreadFinished;
+                        _callbacks.ThreadStarted -= OnThreadStarted;
+                        _callbacks.ProcessExited -= OnProcessExited;
+                    }
+
+                    if (_debugger != null)
+                    {
+                        _debugger.EndSession(DEBUG_END.ACTIVE_TERMINATE);
+                        _debugger.SetEventCallbacks(null);
+                        _debugger.SetOutputCallbacks(null);
+                        _debugger.SetInputCallbacks(null);
+                    }
 
                     _callbacks = null;
-
                     _messages.Dispose();
                 }
 
-                while (Marshal.ReleaseComObject(_debugger) > 0)
+                if (_debugger != null)
                 {
+                    while (Marshal.ReleaseComObject(_debugger) > 0)
+                    {
+                    }
                 }
 
                 _debugger = null;

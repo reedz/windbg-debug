@@ -41,9 +41,8 @@ namespace WinDbgDebug.WinDbg
                 SendErrorResponse(response, ErrorCodes.TargetDoesNotExist, $"Could not attach to '{target}' as it does not exist.");
             }
 
-            string debuggerEnginePath = arguments.windbgpath;
-            var sources = ParseSources(arguments);
-            InitializeDebugger(debuggerEnginePath, sources);
+            var options = ReadDebuggerOptions(arguments);
+            InitializeDebugger(options);
 
             var result = _api.Attach(processId);
 
@@ -117,12 +116,10 @@ namespace WinDbgDebug.WinDbg
             if (string.IsNullOrWhiteSpace(target) || !File.Exists(target))
                 SendErrorResponse(response, ErrorCodes.TargetDoesNotExist, $"Could not launch '{target}' as it does not exist.");
 
+            var options = ReadDebuggerOptions(arguments);
+            InitializeDebugger(options);
+
             string args = arguments.args;
-            string debuggerEnginePath = arguments.windbgpath;
-            string[] sources = ParseSources(arguments);
-
-            InitializeDebugger(debuggerEnginePath, sources);
-
             var result = _api.Launch(target, args);
 
             if (!string.IsNullOrEmpty(result))
@@ -242,6 +239,15 @@ namespace WinDbgDebug.WinDbg
             LogFinish();
         }
 
+        private static string[] ParseSymbolPaths(dynamic arguments)
+        {
+            JArray symbols = arguments.symbols;
+            if (symbols == null)
+                return new string[0];
+
+            return symbols.Select(x => x.ToString()).ToArray();
+        }
+
         private static string[] ParseSources(dynamic arguments)
         {
             JArray sources = arguments.sources;
@@ -256,6 +262,15 @@ namespace WinDbgDebug.WinDbg
             string verbosity = arguments.verbosity;
             if (!string.IsNullOrWhiteSpace(verbosity))
                 Logging.ChangeVerbosity(verbosity);
+        }
+
+        private WinDbgOptions ReadDebuggerOptions(dynamic arguments)
+        {
+            string debuggerEnginePath = arguments.windbgpath;
+            string[] sources = ParseSources(arguments);
+            string[] symbolPaths = ParseSymbolPaths(arguments);
+
+            return new WinDbgOptions(debuggerEnginePath, sources, symbolPaths);
         }
 
         private void StopDebugging()
@@ -276,10 +291,10 @@ namespace WinDbgDebug.WinDbg
             return new VSCodeDebug.Variable(variable.Name, variable.Value, variable.HasChildren ? variable.Id : Defaults.NoChildren);
         }
 
-        private void InitializeDebugger(string debuggerEnginePath, string[] sources)
+        private void InitializeDebugger(WinDbgOptions options)
         {
             Action<string> loggerAction = (text) => SendEvent(new OutputEvent("stdout", text));
-            _wrapper = new WinDbgWrapper(debuggerEnginePath, sources);
+            _wrapper = new WinDbgWrapper(options);
             _wrapper.BreakpointHit += OnBreakpoint;
             _wrapper.ExceptionHit += OnException;
             _wrapper.BreakHit += OnBreak;
