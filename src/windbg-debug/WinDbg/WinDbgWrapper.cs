@@ -154,6 +154,7 @@ namespace WinDbgDebug.WinDbg
             _handlers.Add(typeof(TerminateMessage), (message) => DoEndSession());
             _handlers.Add(typeof(StackTraceMessage), (message) => DoGetStackTrace((StackTraceMessage)message));
             _handlers.Add(typeof(VariablesMessage), (message) => DoGetVariables((VariablesMessage)message));
+            _handlers.Add(typeof(SetVariableValueMessage), (message) => DoSetVariable((SetVariableValueMessage)message));
             _handlers.Add(typeof(StepOverMessage), (message) => DoStepOver());
             _handlers.Add(typeof(StepIntoMessage), (message) => DoStepInto());
             _handlers.Add(typeof(StepOutMessage), (message) => DoStepOut());
@@ -594,7 +595,7 @@ namespace WinDbgDebug.WinDbg
                 {
                     variable = State.AddVariable(
                         parentId,
-                        (id) => new Variable(id, variableName, typeName, handledVariable.Value, handledVariable.HasChildren),
+                        (id) => new Variable(id, variableName, typeName, handledVariable.Value, handledVariable.HasChildren, variableIndex),
                         typedData);
                 }
                 else
@@ -603,12 +604,31 @@ namespace WinDbgDebug.WinDbg
                     if (parameters.Length > variableIndex)
                         hasChildren = parameters[variableIndex].SubElements > 0;
 
-                    variable = State.AddVariable(parentId, (id) => new Variable(id, variableName, typeName, value, hasChildren), typedData);
+                    variable = State.AddVariable(parentId, (id) => new Variable(id, variableName, typeName, value, hasChildren, variableIndex), typedData);
                 }
                 result.Add(variable);
             }
 
             return result;
+        }
+
+        private MessageResult DoSetVariable(SetVariableValueMessage message)
+        {
+            var scope = State.GetScope(message.Scope);
+            EnsureIsCurrentScope(scope);
+            IDebugSymbolGroup2 group;
+
+            var hr = _symbols.GetScopeSymbolGroup2(Scopes.GetScopeByName(scope.Name), null, out group);
+            if (hr != HResult.Ok)
+                return new SetVariableValueMessageResult();
+
+            Variable variable = State.GetVariable(scope.Id, v => v.Name == message.Variable);
+            if (variable == null)
+                return new SetVariableValueMessageResult();
+            hr = group.WriteSymbolWide(variable.Index.Value, message.Value);
+            if (hr != HResult.Ok)
+                return new SetVariableValueMessageResult();
+            return new SetVariableValueMessageResult(message.Value);
         }
 
         private byte[] ReadValue(_DEBUG_TYPED_DATA typedData)

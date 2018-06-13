@@ -97,6 +97,12 @@ namespace WinDbgDebug.WinDbg
             return result.Variables;
         }
 
+        public string SetVariableValue(string variable, string value, int scope)
+        {
+            var result = _wrapper.HandleMessage<SetVariableValueMessageResult>(new SetVariableValueMessage(variable, value, scope)).Result;
+            return result.Value;
+        }
+
         public string Evaluate(string expression)
         {
             var result = _wrapper.HandleMessage<EvaluateMessageResult>(new EvaluateMessage(expression), _timeout).Result;
