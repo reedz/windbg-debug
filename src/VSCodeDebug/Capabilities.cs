@@ -12,6 +12,7 @@ namespace VSCodeDebug
         public bool supportsFunctionBreakpoints;
         public bool supportsConditionalBreakpoints;
         public bool supportsEvaluateForHovers;
+        public bool supportsSetVariable;
         public dynamic[] exceptionBreakpointFilters;
 #pragma warning restore SA1307 // Accessible fields must begin with upper-case letter
     }

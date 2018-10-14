@@ -97,7 +97,7 @@ namespace WinDbgDebug.WinDbg
                 return;
             }
 
-            SendResponse(response, new Capabilities());
+            SendResponse(response, new Capabilities() { supportsSetVariable = true });
             SendEvent(new InitializedEvent());
 
             LogFinish();
@@ -235,6 +235,19 @@ namespace WinDbgDebug.WinDbg
 
             var result = _api.GetCurrentVariables(parentId);
             SendResponse(response, new VariablesResponseBody(result.Select(ToVariable).ToList()));
+
+            LogFinish();
+        }
+
+        public override void SetVariableValue(Response response, dynamic arguments)
+        {
+            LogStart();
+
+            string variable = arguments.name;
+            string value = arguments.value;
+            int scope = arguments.variablesReference;
+            var result = _api.SetVariableValue(variable, value, scope);
+            SendResponse(response, new SetVariableValueResponseBody(result));
 
             LogFinish();
         }

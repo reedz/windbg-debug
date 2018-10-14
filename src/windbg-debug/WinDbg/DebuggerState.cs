@@ -146,6 +146,11 @@ namespace WinDbgDebug.WinDbg
             return GetItem(variableId, _variableDescriptions);
         }
 
+        public Variable GetVariable(int scope, Func<Variable, bool> predicate)
+        {
+            return GetVariablesByScope(scope).First(predicate);
+        }
+
         private List<T> GetChildren<T>(int parentId, Dictionary<int, T> container)
         {
             HashSet<int> indices;

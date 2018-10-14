@@ -143,6 +143,10 @@ namespace VSCodeDebug
                         Evaluate(response, args);
                         break;
 
+                    case "setVariable":
+                        SetVariableValue(response, args);
+                        break;
+
                     default:
                         SendErrorResponse(response, 1014, "unrecognized request: {_request}", new { _request = command });
                         break;
@@ -192,6 +196,8 @@ namespace VSCodeDebug
         public abstract void Scopes(Response response, dynamic arguments);
 
         public abstract void Variables(Response response, dynamic arguments);
+
+        public abstract void SetVariableValue(Response response, dynamic arguments);
 
         public virtual void Source(Response response, dynamic arguments)
         {

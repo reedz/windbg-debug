@@ -115,6 +115,7 @@
     <Compile Include="WinDbg\Messages\PauseMessage.cs" />
     <Compile Include="WinDbg\Messages\ScopesMessage.cs" />
     <Compile Include="WinDbg\Messages\SetBreakpointsMessage.cs" />
+    <Compile Include="WinDbg\Messages\SetVariableValueMessage.cs" />
     <Compile Include="WinDbg\Messages\StackTraceMessage.cs" />
     <Compile Include="WinDbg\Messages\StepIntoMessage.cs" />
     <Compile Include="WinDbg\Messages\StepOutMessage.cs" />
@@ -131,6 +132,7 @@
     <Compile Include="WinDbg\Results\MessageResult.cs" />
     <Compile Include="WinDbg\Results\ScopesMessageResult.cs" />
     <Compile Include="WinDbg\Results\SetBreakpointsMessageResult.cs" />
+    <Compile Include="WinDbg\Results\SetVariableValueMessageResult.cs" />
     <Compile Include="WinDbg\Results\StackTraceMessageResult.cs" />
     <Compile Include="WinDbg\Results\TerminateMessageResult.cs" />
     <Compile Include="WinDbg\Results\ThreadsMessageResult.cs" />

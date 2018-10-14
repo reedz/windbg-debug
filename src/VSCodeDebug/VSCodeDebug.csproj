@@ -64,6 +64,7 @@
     <Compile Include="Scope.cs" />
     <Compile Include="ScopesResponseBody.cs" />
     <Compile Include="SetBreakpointsResponseBody.cs" />
+    <Compile Include="SetVariableValueResponseBody.cs" />
     <Compile Include="Source.cs" />
     <Compile Include="StackFrame.cs" />
     <Compile Include="StackTraceResponseBody.cs" />
